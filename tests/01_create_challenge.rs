@@ -1,6 +1,7 @@
 #![cfg(feature = "test-sbf")]
 
-use challenge::ixs;
+use crate::utils::get_deserialized;
+use challenge::{challenge_id, ixs, state::Challenge};
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 
@@ -16,8 +17,16 @@ async fn create_challenge_without_solutions() {
     let creator = context.payer.pubkey();
     let redeem = Pubkey::new_unique();
 
-    let ix = ixs::create_challenge(creator, creator, 1000, 1, redeem, None)
-        .expect("failed to create instruction");
+    let ix = ixs::create_challenge(
+        creator,
+        creator,
+        1000,
+        1,
+        redeem,
+        vec![],
+        Some(2),
+    )
+    .expect("failed to create instruction");
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -30,7 +39,13 @@ async fn create_challenge_without_solutions() {
         .banks_client
         .process_transaction(tx)
         .await
-        .expect("Failed to verify minted token");
+        .expect("Failed create challenge");
+
+    // Checks
+    let (challenge_pda, _) = Challenge::shank_pda(&challenge_id(), &creator);
+    let (_, data) =
+        get_deserialized::<Challenge>(&mut context, &challenge_pda).await;
+    eprintln!("{:#?}", data);
 }
 
 // -----------------
@@ -49,7 +64,8 @@ async fn create_challenge_with_invalid_pda() {
         1000,
         1,
         redeem,
-        None,
+        vec![],
+        Some(2),
         Pubkey::new_unique(),
     )
     .expect("failed to create instruction");

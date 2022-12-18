@@ -1,4 +1,4 @@
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -8,12 +8,17 @@ use solana_program::{
 };
 
 use crate::{
-    challenge_id, check_id, ixs::ChallengeInstruction, state::Challenge,
-    utils::assert_pda,
+    challenge_id, check_id,
+    ixs::ChallengeInstruction,
+    state::Challenge,
+    utils::{
+        allocate_account_and_assign_owner, assert_pda,
+        AllocateAndAssignAccountArgs,
+    },
 };
 
 pub fn process<'a>(
-    program_id: &Pubkey,
+    program_id: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
     instruction_data: &[u8],
 ) -> ProgramResult {
@@ -28,14 +33,19 @@ pub fn process<'a>(
             tries_per_admit,
             redeem,
             solutions,
-        } => process_create_challenge(
-            program_id,
-            accounts,
-            admit_cost,
-            tries_per_admit,
-            redeem,
-            solutions,
-        ),
+            max_solutions,
+        } => {
+            let max_solutions = max_solutions.unwrap_or(solutions.len() as u8);
+            process_create_challenge(
+                program_id,
+                accounts,
+                admit_cost,
+                tries_per_admit,
+                redeem,
+                solutions,
+                max_solutions,
+            )
+        }
         AddSolutions { solutions: _ } => todo!(),
     }
 }
@@ -44,16 +54,18 @@ pub fn process<'a>(
 // Create Challenge
 // -----------------
 fn process_create_challenge<'a>(
-    program_id: &Pubkey,
+    program_id: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
     admit_cost: u64,
-    tries_per_admi: u64,
+    tries_per_admit: u8,
     redeem: Pubkey,
-    solutions: Option<Vec<[u8; HASH_BYTES]>>,
+    solutions: Vec<[u8; HASH_BYTES]>,
+    max_solutions: u8,
 ) -> ProgramResult {
     msg!("IX: create challenge");
 
     let account_info_iter = &mut accounts.iter();
+    let payer_info = next_account_info(account_info_iter)?;
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
@@ -62,6 +74,27 @@ fn process_create_challenge<'a>(
         challenge_pda_info.key,
         &pda,
         "PDA for the challenge for this creator is incorrect",
+    )?;
+
+    let size = Challenge::size(max_solutions);
+    allocate_account_and_assign_owner(AllocateAndAssignAccountArgs {
+        payer_info,
+        account_info: challenge_pda_info,
+        owner: program_id,
+        size,
+    })?;
+
+    let challenge = Challenge {
+        authority: *creator_info.key,
+        admit_cost,
+        tries_per_admit,
+        redeem,
+        solving: 0,
+        solutions,
+    };
+
+    challenge.serialize(
+        &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),
     )?;
 
     Ok(())
