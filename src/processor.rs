@@ -69,18 +69,22 @@ fn process_create_challenge<'a>(
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
-    let (pda, _) = Challenge::shank_pda(&challenge_id(), creator_info.key);
+    let (pda, bump) = Challenge::shank_pda(&challenge_id(), creator_info.key);
     assert_pda(
         challenge_pda_info.key,
         &pda,
         "PDA for the challenge for this creator is incorrect",
     )?;
 
+    let bump_arr = [bump];
+    let seeds = Challenge::shank_seeds_with_bump(creator_info.key, &bump_arr);
+
     let size = Challenge::size(max_solutions);
     allocate_account_and_assign_owner(AllocateAndAssignAccountArgs {
         payer_info,
         account_info: challenge_pda_info,
         owner: program_id,
+        signer_seeds: &seeds,
         size,
     })?;
 

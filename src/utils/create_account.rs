@@ -1,7 +1,12 @@
 use solana_program::{
-    account_info::AccountInfo, msg, program::invoke,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent,
-    system_instruction, sysvar::Sysvar,
+    account_info::AccountInfo,
+    msg,
+    program::{invoke, invoke_signed},
+    program_error::ProgramError,
+    pubkey::Pubkey,
+    rent::Rent,
+    system_instruction,
+    sysvar::Sysvar,
 };
 
 use crate::error::ChallengeError;
@@ -30,11 +35,12 @@ fn transfer_lamports<'a>(
     )
 }
 
-pub struct AllocateAndAssignAccountArgs<'a> {
+pub struct AllocateAndAssignAccountArgs<'a, 'b> {
     pub payer_info: &'a AccountInfo<'a>,
     pub account_info: &'a AccountInfo<'a>,
     pub owner: &'a Pubkey,
     pub size: usize,
+    pub signer_seeds: &'b [&'b [u8]],
 }
 
 #[inline(always)]
@@ -47,6 +53,7 @@ pub fn allocate_account_and_assign_owner(
         account_info,
         owner,
         size,
+        signer_seeds,
     } = args;
 
     let required_lamports = rent
@@ -62,21 +69,23 @@ pub fn allocate_account_and_assign_owner(
     // 2. Allocate the space to hold data we'll set during mint initialization
     //    At this point the account is still owned by the system program
     msg!("create_account() allocate space");
-    // TODO(thlorenz): may need to invoke_signed with seeds here
-    invoke(
+    invoke_signed(
         &system_instruction::allocate(
             account_info.key,
             size.try_into().unwrap(),
         ),
+        // 0. `[WRITE, SIGNER]` New account
         &[account_info.clone()],
+        &[signer_seeds],
     )?;
 
     // 3. Assign the owner of the account so that it can sign on its behalf
-    //    In our case we set the spl_token as owner so we can init the mint
     msg!("create_account() assign to owning program");
-    invoke(
+    invoke_signed(
         &system_instruction::assign(account_info.key, owner),
+        // 0. `[WRITE, SIGNER]` Assigned account public key
         &[account_info.clone()],
+        &[signer_seeds],
     )?;
 
     Ok(())
