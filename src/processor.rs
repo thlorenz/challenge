@@ -101,5 +101,7 @@ fn process_create_challenge<'a>(
         &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),
     )?;
 
+    msg!("Challenge account created and initialized ");
+
     Ok(())
 }

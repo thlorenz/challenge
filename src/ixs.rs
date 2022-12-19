@@ -1,6 +1,6 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
-    hash::HASH_BYTES,
+    hash::{hash, HASH_BYTES},
     instruction::{AccountMeta, Instruction},
     program_error::ProgramError,
     pubkey::Pubkey,
@@ -43,7 +43,8 @@ pub enum ChallengeInstruction {
 /// * [admit_cost]: the amount of SOL that must be paid to admit a challenger
 /// * [tries_per_admit]: the number of tries that a challenger gets for the given admit_cost
 /// * [redeem]: the address that will receive the SOL when a solution of the challenge found
-/// * [solutions]: the solutions need to be solved, encoded as follows `sha256(sha256(solution))`
+/// * [solutions]: solutions to be solved in clear text, they are encoded via
+///   `sha256(sha256(solution))` before being passed on to the program
 /// * [max_solutions]: the number of solutions to expect (we allow up to 256)
 ///   needs to be provided if not all solutions are provided, but will be added later
 pub fn create_challenge(
@@ -52,10 +53,17 @@ pub fn create_challenge(
     admit_cost: u64,
     tries_per_admit: u8,
     redeem: Pubkey,
-    solutions: Vec<[u8; HASH_BYTES]>,
+    solutions: Vec<&str>,
     max_solutions: Option<u8>,
 ) -> Result<Instruction, ProgramError> {
     let (challenge_pda, _) = Challenge::shank_pda(&challenge_id(), &creator);
+    let solutions = solutions
+        .into_iter()
+        .map(|s| {
+            let users_sends = hash(s.as_bytes()).to_bytes();
+            hash(&users_sends).to_bytes()
+        })
+        .collect::<Vec<[u8; HASH_BYTES]>>();
     let ix = Instruction {
         program_id: challenge_id(),
         accounts: vec![

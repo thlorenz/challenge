@@ -2,7 +2,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use shank::ShankAccount;
 use solana_program::{hash::HASH_BYTES, pubkey::Pubkey};
 
-#[derive(Debug, ShankAccount, BorshSerialize, BorshDeserialize)]
+#[derive(ShankAccount, BorshSerialize, BorshDeserialize)]
 #[seeds(
     "challenge",
     creator("The authority managing the challenge, usually the creator")
@@ -29,20 +29,37 @@ pub struct Challenge {
     pub solutions: Vec<[u8; HASH_BYTES]>,
 }
 
-pub const EMPTY_CHALLENGE_SIZE: usize = 
+impl std::fmt::Debug for Challenge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Challenge")
+            .field("authority", &self.authority)
+            .field("admit_cost", &self.admit_cost)
+            .field("tries_per_admit", &self.tries_per_admit)
+            .field("redeem", &self.redeem)
+            .field("solving", &self.solving)
+            .field("solutions", &self.solutions.len())
+            .finish()
+    }
+}
+
+#[rustfmt::skip]
+pub const EMPTY_CHALLENGE_SIZE: usize =
     /* authority */      32 + 
     /* admit_cost */      8 +
     /* tries_per_admit */ 1 +
     /* redeem */         32 +
     /* solving */         1 +
-    /* solutions */       0;
+    /* solutions */       4; // u32 for Vec::len
 
 impl Challenge {
     pub fn size(max_solutions: u8) -> usize {
-        EMPTY_CHALLENGE_SIZE + max_solutions as usize * HASH_BYTES
+        EMPTY_CHALLENGE_SIZE + Challenge::solution_size(max_solutions)
+    }
+
+    pub fn solution_size(max_solutions: u8) -> usize {
+        max_solutions as usize * HASH_BYTES
     }
 }
-
 
 #[derive(Debug, ShankAccount)]
 #[seeds(
