@@ -15,3 +15,12 @@ pub fn assert_pda(
         Ok(())
     }
 }
+
+pub fn assert_max_solutions(max_solutions: u8) -> ProgramResult {
+    if max_solutions == 0 {
+        msg!("Err: max_solutions need to be at least 1");
+        Err(ChallengeError::InvalidMaxSolutions.into())
+    } else {
+        Ok(())
+    }
+}

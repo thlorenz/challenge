@@ -12,7 +12,7 @@ use crate::{
     ixs::ChallengeInstruction,
     state::Challenge,
     utils::{
-        allocate_account_and_assign_owner, assert_pda,
+        allocate_account_and_assign_owner, assert_max_solutions, assert_pda,
         AllocateAndAssignAccountArgs,
     },
 };
@@ -63,6 +63,13 @@ fn process_create_challenge<'a>(
     max_solutions: u8,
 ) -> ProgramResult {
     msg!("IX: create challenge");
+
+    assert_max_solutions(max_solutions)?;
+
+    // TODO(thlorenz): think about if we need to ensure that we don't allow
+    // pre-initialized accounts.
+    // Should not be an issue and would also fail when trying to create the
+    // account again.
 
     let account_info_iter = &mut accounts.iter();
     let payer_info = next_account_info(account_info_iter)?;

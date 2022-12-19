@@ -7,7 +7,7 @@ pub async fn get_deserialized<T: BorshDeserialize>(
     context: &mut ProgramTestContext,
     pubkey: &Pubkey,
 ) -> (Account, T) {
-    let data = context
+    let acc = context
         .banks_client
         .get_account(*pubkey)
         .await
@@ -15,6 +15,6 @@ pub async fn get_deserialized<T: BorshDeserialize>(
         .expect("account empty");
 
     let value: T =
-        try_from_slice_unchecked(&data.data).expect("Unable to deserialize");
-    (data, value)
+        try_from_slice_unchecked(&acc.data).expect("Unable to deserialize");
+    (acc, value)
 }
