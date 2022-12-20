@@ -23,8 +23,22 @@ pub enum ChallengeError {
     #[error("Account should be program")]
     AccountShouldBeProgram,
 
+    // -----------------
+    // Adding Solutions
+    // -----------------
     #[error("Provided max_solutions is incorrect. Violates 1 <= max_solutions <= solutions.len()")]
     InvalidMaxSolutions,
+
+    #[error("Amount of solutions exceeds maximum supported solutions ")]
+    ExceedingMaxSupportedSolutions,
+
+    #[error("Adding solutions would exceed max_solutions")]
+    ExceedingMaxAllocatedSolutions,
+
+    #[error(
+        "Adding solutions at index would create a hole in the solutions array"
+    )]
+    SolutionArrayCannotBeSparse,
 
     #[error("Account should have address")]
     AccountShouldHaveAddress,
@@ -36,9 +50,6 @@ pub enum ChallengeError {
 
     #[error("ATA Account data is empty")]
     ATAIsNotInitialized,
-
-    #[error("ATA Account holds zero tokens of the mint")]
-    ATAZeroTokensForMint,
 
     #[error("Payer does not have sufficient lamports to fund the operation")]
     InsufficientFunds,

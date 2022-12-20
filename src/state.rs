@@ -2,6 +2,8 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use shank::ShankAccount;
 use solana_program::{hash::HASH_BYTES, pubkey::Pubkey};
 
+use crate::Solution;
+
 #[derive(ShankAccount, BorshSerialize, BorshDeserialize)]
 #[seeds(
     "challenge",
@@ -26,7 +28,7 @@ pub struct Challenge {
 
     pub solving: u8,
 
-    pub solutions: Vec<[u8; HASH_BYTES]>,
+    pub solutions: Vec<Solution>,
 }
 
 impl std::fmt::Debug for Challenge {
@@ -58,6 +60,17 @@ impl Challenge {
 
     pub fn solution_size(max_solutions: u8) -> usize {
         max_solutions as usize * HASH_BYTES
+    }
+
+    pub fn max_solutions(data_len: usize) -> u8 {
+        // Alternatively we could just read the vec len at solutions index
+        let els_size = data_len - EMPTY_CHALLENGE_SIZE;
+        (els_size / HASH_BYTES) as u8
+    }
+
+    /// Returns the size assuming no more solutions will be added.
+    pub fn current_size(&self) -> usize {
+        Challenge::size(self.solutions.len() as u8)
     }
 }
 
