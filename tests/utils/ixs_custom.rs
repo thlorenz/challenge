@@ -15,7 +15,6 @@ pub fn create_challenge_with_pda(
     tries_per_admit: u8,
     redeem: Pubkey,
     solutions: Vec<Solution>,
-    max_solutions: Option<u8>,
     challenge_pda: Pubkey,
 ) -> Result<Instruction, ProgramError> {
     let ix = Instruction {
@@ -30,7 +29,6 @@ pub fn create_challenge_with_pda(
             tries_per_admit,
             redeem,
             solutions,
-            max_solutions,
         }
         .try_to_vec()?,
     };

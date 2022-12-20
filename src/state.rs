@@ -54,12 +54,13 @@ pub const EMPTY_CHALLENGE_SIZE: usize =
     /* solutions */       4; // u32 for Vec::len
 
 impl Challenge {
-    pub fn size(max_solutions: u8) -> usize {
-        EMPTY_CHALLENGE_SIZE + Challenge::solution_size(max_solutions)
+    pub fn needed_size(solutions: &[Solution]) -> usize {
+        EMPTY_CHALLENGE_SIZE
+            + Challenge::space_to_store_n_solutions(solutions.len() as u8)
     }
 
-    pub fn solution_size(max_solutions: u8) -> usize {
-        max_solutions as usize * HASH_BYTES
+    pub fn space_to_store_n_solutions(solutions_len: u8) -> usize {
+        solutions_len as usize * HASH_BYTES
     }
 
     pub fn max_solutions(data_len: usize) -> u8 {
@@ -69,8 +70,8 @@ impl Challenge {
     }
 
     /// Returns the size assuming no more solutions will be added.
-    pub fn current_size(&self) -> usize {
-        Challenge::size(self.solutions.len() as u8)
+    pub fn size(&self) -> usize {
+        Challenge::needed_size(&self.solutions)
     }
 }
 

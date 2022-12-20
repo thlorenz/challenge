@@ -33,7 +33,7 @@ pub fn add_challenge_account(
         Challenge::shank_pda(&challenge_id(), &challenge.authority);
 
     let lamports = LAMPORTS_PER_SOL * 2;
-    let space = challenge.current_size();
+    let space = challenge.size();
     let mut account = AccountSharedData::new(lamports, space, &challenge_id());
     account.set_data(challenge.try_to_vec().unwrap());
 

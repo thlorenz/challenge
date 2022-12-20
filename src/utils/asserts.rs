@@ -16,24 +16,6 @@ pub fn assert_keys_equal(
     }
 }
 
-pub fn assert_max_allocated_solutions(
-    max_solutions: u8,
-    solutions: &[Solution],
-) -> ProgramResult {
-    let provided_solutions_len = solutions.len();
-    if max_solutions == 0 {
-        msg!("Err: max_solutions need to be at least 1");
-        Err(ChallengeError::InvalidMaxSolutions.into())
-    } else if (max_solutions as usize) < provided_solutions_len {
-        msg!(
-            "Err: max_solutions is less than the number of provided solutions"
-        );
-        Err(ChallengeError::InvalidMaxSolutions.into())
-    } else {
-        Ok(())
-    }
-}
-
 pub fn assert_max_supported_solutions(solutions: &[Solution]) -> ProgramResult {
     let len = solutions.len();
     if len > u8::MAX as usize {

@@ -13,8 +13,8 @@ use crate::{
     state::Challenge,
     utils::{
         allocate_account_and_assign_owner, assert_can_add_solutions_at_index,
-        assert_keys_equal, assert_max_allocated_solutions,
-        assert_max_supported_solutions, AllocateAndAssignAccountArgs,
+        assert_keys_equal, assert_max_supported_solutions,
+        AllocateAndAssignAccountArgs,
     },
     Solution,
 };
@@ -35,19 +35,14 @@ pub fn process<'a>(
             tries_per_admit,
             redeem,
             solutions,
-            max_solutions,
-        } => {
-            let max_solutions = max_solutions.unwrap_or(solutions.len() as u8);
-            process_create_challenge(
-                program_id,
-                accounts,
-                admit_cost,
-                tries_per_admit,
-                redeem,
-                solutions,
-                max_solutions,
-            )
-        }
+        } => process_create_challenge(
+            program_id,
+            accounts,
+            admit_cost,
+            tries_per_admit,
+            redeem,
+            solutions,
+        ),
         AddSolutions { solutions, index } => {
             process_add_solutions(program_id, accounts, solutions, index)
         }
@@ -64,12 +59,10 @@ fn process_create_challenge<'a>(
     tries_per_admit: u8,
     redeem: Pubkey,
     solutions: Vec<Solution>,
-    max_solutions: u8,
 ) -> ProgramResult {
     msg!("IX: create challenge");
 
     assert_max_supported_solutions(&solutions)?;
-    assert_max_allocated_solutions(max_solutions, &solutions)?;
 
     // TODO(thlorenz): think about if we need to ensure that we don't allow
     // pre-initialized accounts.
@@ -82,7 +75,6 @@ fn process_create_challenge<'a>(
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
     let (pda, bump) = Challenge::shank_pda(&challenge_id(), creator_info.key);
-    // TODO(thlorenz): @@@ check creator is signer
     assert_keys_equal(
         challenge_pda_info.key,
         &pda,
@@ -92,7 +84,7 @@ fn process_create_challenge<'a>(
     let bump_arr = [bump];
     let seeds = Challenge::shank_seeds_with_bump(creator_info.key, &bump_arr);
 
-    let size = Challenge::size(max_solutions);
+    let size = Challenge::needed_size(&solutions);
     allocate_account_and_assign_owner(AllocateAndAssignAccountArgs {
         payer_info,
         account_info: challenge_pda_info,
@@ -145,6 +137,7 @@ fn process_add_solutions(
     let challenge_data_len = challenge_data.len();
     let mut challenge = try_from_slice_unchecked::<Challenge>(challenge_data)?;
 
+    // TODO(thlorenz): @@@ check creator is signer
     assert_keys_equal(
         creator_info.key,
         &challenge.authority,

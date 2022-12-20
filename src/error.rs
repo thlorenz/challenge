@@ -26,9 +26,6 @@ pub enum ChallengeError {
     // -----------------
     // Adding Solutions
     // -----------------
-    #[error("Provided max_solutions is incorrect. Violates 1 <= max_solutions <= solutions.len()")]
-    InvalidMaxSolutions,
-
     #[error("Amount of solutions exceeds maximum supported solutions ")]
     ExceedingMaxSupportedSolutions,
 

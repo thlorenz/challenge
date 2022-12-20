@@ -20,14 +20,6 @@ pub enum ChallengeInstruction {
         /// Transaction size is ~1,024 bytes which means if more solutions are desired they
         /// need to be added separately via the `AddSolutions` instruction.
         solutions: Vec<Solution>,
-
-        /// The number of solutions to expect (we allow up to 256)
-        /// If this is not provided than the count of the provided is assumed to be the
-        /// max amount and thus no solutions can be added in the future.
-        // TODO(thlorenz): we should use AccountInfo::realloc to allow for arbitrary
-        //   addition of solutions without specifying exactly how much we're planning
-        //   to add
-        max_solutions: Option<u8>,
     },
 
     AddSolutions {
@@ -53,8 +45,6 @@ pub enum ChallengeInstruction {
 /// * [redeem]: the address that will receive the SOL when a solution of the challenge found
 /// * [solutions]: solutions to be solved in clear text, they are encoded via
 ///   `sha256(sha256(solution))` before being passed on to the program
-/// * [max_solutions]: the number of solutions to expect (we allow up to 256)
-///   needs to be provided if not all solutions are provided, but will be added later
 pub fn create_challenge(
     payer: Pubkey,
     creator: Pubkey,
@@ -62,7 +52,6 @@ pub fn create_challenge(
     tries_per_admit: u8,
     redeem: Pubkey,
     solutions: Vec<&str>,
-    max_solutions: Option<u8>,
 ) -> Result<Instruction, ProgramError> {
     let (challenge_pda, _) = Challenge::shank_pda(&challenge_id(), &creator);
     let solutions = hash_solutions(&solutions);
@@ -80,7 +69,6 @@ pub fn create_challenge(
             tries_per_admit,
             redeem,
             solutions,
-            max_solutions,
         }
         .try_to_vec()?,
     };
