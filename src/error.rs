@@ -23,7 +23,7 @@ pub enum ChallengeError {
     #[error("Account should be program")]
     AccountShouldBeProgram,
 
-    #[error("Provided max_solutions is incorrect, needs to be at least 1")]
+    #[error("Provided max_solutions is incorrect. Violates 1 <= max_solutions <= solutions.len()")]
     InvalidMaxSolutions,
 
     #[error("Account should have address")]

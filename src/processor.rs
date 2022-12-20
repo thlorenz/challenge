@@ -64,7 +64,8 @@ fn process_create_challenge<'a>(
 ) -> ProgramResult {
     msg!("IX: create challenge");
 
-    assert_max_solutions(max_solutions)?;
+    // TODO(thlorenz): assert they arent' < solutions.len()
+    assert_max_solutions(max_solutions, solutions.len())?;
 
     // TODO(thlorenz): think about if we need to ensure that we don't allow
     // pre-initialized accounts.

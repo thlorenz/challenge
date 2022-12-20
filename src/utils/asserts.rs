@@ -16,9 +16,17 @@ pub fn assert_pda(
     }
 }
 
-pub fn assert_max_solutions(max_solutions: u8) -> ProgramResult {
+pub fn assert_max_solutions(
+    max_solutions: u8,
+    provided_solutions_len: usize,
+) -> ProgramResult {
     if max_solutions == 0 {
         msg!("Err: max_solutions need to be at least 1");
+        Err(ChallengeError::InvalidMaxSolutions.into())
+    } else if (max_solutions as usize) < provided_solutions_len {
+        msg!(
+            "Err: max_solutions is less than the number of provided solutions"
+        );
         Err(ChallengeError::InvalidMaxSolutions.into())
     } else {
         Ok(())
