@@ -15,8 +15,8 @@ pub async fn get_deserialized<T: BorshDeserialize>(
         .banks_client
         .get_account(*pubkey)
         .await
-        .expect("account not found")
-        .expect("account empty");
+        .expect("get_deserialized(): account not found")
+        .expect("get_deserialized(): account empty");
 
     let value: T =
         try_from_slice_unchecked(&acc.data).expect("Unable to deserialize");

@@ -10,7 +10,8 @@ use crate::Solution;
 #[derive(ShankAccount, BorshSerialize, BorshDeserialize)]
 #[seeds(
     "challenge",
-    creator("The authority managing the challenge, usually the creator")
+    creator("The authority managing the challenge, usually the creator"),
+    // challenge_id( "The id of the challenge, must be unique for each creator", str)
 )]
 /// This is the PDA account that holds the state of a challenge.
 /// The creator will usually be the update_authority, but this is not required.

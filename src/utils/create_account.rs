@@ -20,9 +20,9 @@ fn transfer_lamports<'a>(
     to_account_info: &AccountInfo<'a>,
     lamports: u64,
 ) -> Result<(), ProgramError> {
-    msg!("transfer_lamports()");
+    msg!("  transfer_lamports()");
     if payer_info.lamports() < lamports {
-        msg!("Payer has only {} lamports", payer_info.lamports());
+        msg!("Err: payer has only {} lamports", payer_info.lamports());
         return Err(ChallengeError::InsufficientFunds.into());
     }
     invoke(
@@ -68,7 +68,7 @@ pub fn allocate_account_and_assign_owner(
 
     // 2. Allocate the space to hold data we'll set during mint initialization
     //    At this point the account is still owned by the system program
-    msg!("create_account() allocate space");
+    msg!("  create_account() allocate space");
     invoke_signed(
         &system_instruction::allocate(
             account_info.key,
@@ -80,7 +80,7 @@ pub fn allocate_account_and_assign_owner(
     )?;
 
     // 3. Assign the owner of the account so that it can sign on its behalf
-    msg!("create_account() assign to owning program");
+    msg!("  create_account() assign to owning program");
     invoke_signed(
         &system_instruction::assign(account_info.key, owner),
         // 0. `[WRITE, SIGNER]` Assigned account public key
@@ -101,7 +101,7 @@ pub struct ReallocateAccountArgs<'a> {
 pub fn reallocate_account(
     args: ReallocateAccountArgs,
 ) -> Result<(), ProgramError> {
-    msg!("reallocate_account()");
+    msg!("  reallocate_account()");
 
     let ReallocateAccountArgs {
         payer_info,
@@ -116,12 +116,12 @@ pub fn reallocate_account(
         .minimum_balance(new_size)
         .max(1)
         .saturating_sub(account_info.lamports());
+
     if required_lamports > 0 {
-        msg!("reallocate_account() transfer extra rent");
+        msg!("  reallocate_account() transfer extra rent");
         transfer_lamports(payer_info, account_info, required_lamports)?;
     }
 
     // 2. Reallocate to the new size
-    msg!("reallocate_account() reallocate space");
     account_info.realloc(new_size, zero_init)
 }
