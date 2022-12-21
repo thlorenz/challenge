@@ -1,8 +1,8 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
+    borsh::try_from_slice_unchecked,
     entrypoint::ProgramResult,
-    hash::HASH_BYTES,
     msg,
     pubkey::Pubkey,
 };
@@ -12,9 +12,13 @@ use crate::{
     ixs::ChallengeInstruction,
     state::Challenge,
     utils::{
-        allocate_account_and_assign_owner, assert_max_solutions, assert_pda,
-        AllocateAndAssignAccountArgs,
+        allocate_account_and_assign_owner, assert_account_has_no_data,
+        assert_account_is_funded_and_has_data, assert_adding_non_empty,
+        assert_can_add_solutions, assert_is_signer, assert_keys_equal,
+        assert_max_supported_solutions, reallocate_account,
+        AllocateAndAssignAccountArgs, ReallocateAccountArgs,
     },
+    Solution,
 };
 
 pub fn process<'a>(
@@ -33,20 +37,17 @@ pub fn process<'a>(
             tries_per_admit,
             redeem,
             solutions,
-            max_solutions,
-        } => {
-            let max_solutions = max_solutions.unwrap_or(solutions.len() as u8);
-            process_create_challenge(
-                program_id,
-                accounts,
-                admit_cost,
-                tries_per_admit,
-                redeem,
-                solutions,
-                max_solutions,
-            )
+        } => process_create_challenge(
+            program_id,
+            accounts,
+            admit_cost,
+            tries_per_admit,
+            redeem,
+            solutions,
+        ),
+        AddSolutions { solutions } => {
+            process_add_solutions(program_id, accounts, solutions)
         }
-        AddSolutions { solutions: _ } => todo!(),
     }
 }
 
@@ -59,13 +60,11 @@ fn process_create_challenge<'a>(
     admit_cost: u64,
     tries_per_admit: u8,
     redeem: Pubkey,
-    solutions: Vec<[u8; HASH_BYTES]>,
-    max_solutions: u8,
+    solutions: Vec<Solution>,
 ) -> ProgramResult {
     msg!("IX: create challenge");
 
-    // TODO(thlorenz): assert they arent' < solutions.len()
-    assert_max_solutions(max_solutions, solutions.len())?;
+    assert_max_supported_solutions(&solutions)?;
 
     // TODO(thlorenz): think about if we need to ensure that we don't allow
     // pre-initialized accounts.
@@ -77,17 +76,20 @@ fn process_create_challenge<'a>(
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
+    // TODO(thlorenz): this allows only one challenge per creator
+    //  allow passing another id or pubkey to identify the challenge
     let (pda, bump) = Challenge::shank_pda(&challenge_id(), creator_info.key);
-    assert_pda(
+    assert_keys_equal(
         challenge_pda_info.key,
         &pda,
         "PDA for the challenge for this creator is incorrect",
     )?;
+    assert_account_has_no_data(challenge_pda_info)?;
 
     let bump_arr = [bump];
     let seeds = Challenge::shank_seeds_with_bump(creator_info.key, &bump_arr);
 
-    let size = Challenge::size(max_solutions);
+    let size = Challenge::needed_size(&solutions);
     allocate_account_and_assign_owner(AllocateAndAssignAccountArgs {
         payer_info,
         account_info: challenge_pda_info,
@@ -110,6 +112,64 @@ fn process_create_challenge<'a>(
     )?;
 
     msg!("Challenge account created and initialized ");
+
+    Ok(())
+}
+
+// -----------------
+// Add Solutions
+// -----------------
+fn process_add_solutions<'a>(
+    _program_id: &Pubkey,
+    accounts: &'a [AccountInfo<'a>],
+    extra_solutions: Vec<Solution>,
+) -> ProgramResult {
+    msg!("IX: add solutions");
+
+    assert_adding_non_empty(&extra_solutions)?;
+
+    let account_info_iter = &mut accounts.iter();
+    let payer_info = next_account_info(account_info_iter)?;
+    let creator_info = next_account_info(account_info_iter)?;
+    let challenge_pda_info = next_account_info(account_info_iter)?;
+
+    let (pda, _bump) = Challenge::shank_pda(&challenge_id(), creator_info.key);
+
+    assert_keys_equal(
+        challenge_pda_info.key,
+        &pda,
+        "PDA for the challenge for this creator is incorrect",
+    )?;
+    assert_account_is_funded_and_has_data(challenge_pda_info)?;
+
+    let mut challenge = {
+        let challenge_data = &challenge_pda_info.try_borrow_data()?;
+        try_from_slice_unchecked::<Challenge>(challenge_data)?
+    };
+
+    assert_keys_equal(
+        creator_info.key,
+        &challenge.authority,
+        "creator does not match challenge authority",
+    )?;
+    assert_is_signer(creator_info, "creator")?;
+
+    // 1. append solutions
+    assert_can_add_solutions(&challenge.solutions, &extra_solutions)?;
+    challenge.solutions.extend(extra_solutions);
+
+    // 2. reallocate account to fit extra solutions, including upping lamports to stay rent excempt
+    let size = challenge.size();
+    reallocate_account(ReallocateAccountArgs {
+        payer_info,
+        account_info: challenge_pda_info,
+        new_size: size,
+        zero_init: false,
+    })?;
+
+    challenge.serialize(
+        &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),
+    )?;
 
     Ok(())
 }

@@ -1,11 +1,17 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use shank::ShankAccount;
-use solana_program::{hash::HASH_BYTES, pubkey::Pubkey};
+use solana_program::{
+    hash::HASH_BYTES, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
+    sysvar::Sysvar,
+};
+
+use crate::Solution;
 
 #[derive(ShankAccount, BorshSerialize, BorshDeserialize)]
 #[seeds(
     "challenge",
-    creator("The authority managing the challenge, usually the creator")
+    creator("The authority managing the challenge, usually the creator"),
+    // challenge_id( "The id of the challenge, must be unique for each creator", str)
 )]
 /// This is the PDA account that holds the state of a challenge.
 /// The creator will usually be the update_authority, but this is not required.
@@ -26,7 +32,7 @@ pub struct Challenge {
 
     pub solving: u8,
 
-    pub solutions: Vec<[u8; HASH_BYTES]>,
+    pub solutions: Vec<Solution>,
 }
 
 impl std::fmt::Debug for Challenge {
@@ -52,12 +58,25 @@ pub const EMPTY_CHALLENGE_SIZE: usize =
     /* solutions */       4; // u32 for Vec::len
 
 impl Challenge {
-    pub fn size(max_solutions: u8) -> usize {
-        EMPTY_CHALLENGE_SIZE + Challenge::solution_size(max_solutions)
+    pub fn needed_size(solutions: &[Solution]) -> usize {
+        EMPTY_CHALLENGE_SIZE
+            + Challenge::space_to_store_n_solutions(solutions.len() as u8)
     }
 
-    pub fn solution_size(max_solutions: u8) -> usize {
-        max_solutions as usize * HASH_BYTES
+    pub fn space_to_store_n_solutions(solutions_len: u8) -> usize {
+        solutions_len as usize * HASH_BYTES
+    }
+
+    /// Returns the size assuming no more solutions will be added.
+    pub fn size(&self) -> usize {
+        Challenge::needed_size(&self.solutions)
+    }
+
+    /// Only use on-chain as Rent::get is not available otherwise.
+    #[allow(unused)]
+    pub(crate) fn rent_exempt_lamports(&self) -> Result<u64, ProgramError> {
+        let rent = Rent::get()?;
+        Ok(rent.minimum_balance(self.size()))
     }
 }
 

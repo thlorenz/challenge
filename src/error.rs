@@ -8,6 +8,9 @@ use thiserror::Error;
 
 #[derive(Clone, Debug, Eq, Error, PartialEq, FromPrimitive)]
 pub enum ChallengeError {
+    // -----------------
+    // Security
+    // -----------------
     #[error("You are not authorized to perform this action.")]
     Unauthorized = 0x11c7ac,
 
@@ -23,11 +26,29 @@ pub enum ChallengeError {
     #[error("Account should be program")]
     AccountShouldBeProgram,
 
-    #[error("Provided max_solutions is incorrect. Violates 1 <= max_solutions <= solutions.len()")]
-    InvalidMaxSolutions,
+    // -----------------
+    // Adding Solutions
+    // -----------------
+    #[error("Amount of solutions exceeds maximum supported solutions ")]
+    ExceedingMaxSupportedSolutions,
+
+    #[error("Adding solutions would exceed max_solutions")]
+    ExceedingMaxAllocatedSolutions,
+
+    #[error("When adding solutions you need to provide at least one solution")]
+    NoSolutionsToAddProvided,
 
     #[error("Account should have address")]
     AccountShouldHaveAddress,
+
+    #[error("Account has data but was expected to be empty")]
+    AccountAlreadyHasData,
+
+    #[error("Account has no data")]
+    AccountHasNoData,
+
+    #[error("Account not funded")]
+    AccountNotFunded,
 
     #[error(
         "ATA Account is not correctly derived from the Challenger Account"
@@ -36,9 +57,6 @@ pub enum ChallengeError {
 
     #[error("ATA Account data is empty")]
     ATAIsNotInitialized,
-
-    #[error("ATA Account holds zero tokens of the mint")]
-    ATAZeroTokensForMint,
 
     #[error("Payer does not have sufficient lamports to fund the operation")]
     InsufficientFunds,
