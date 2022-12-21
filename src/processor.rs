@@ -12,9 +12,9 @@ use crate::{
     ixs::ChallengeInstruction,
     state::Challenge,
     utils::{
-        allocate_account_and_assign_owner, assert_can_add_solutions_at_index,
-        assert_keys_equal, assert_max_supported_solutions,
-        AllocateAndAssignAccountArgs,
+        allocate_account_and_assign_owner, assert_can_add_solutions,
+        assert_keys_equal, assert_max_supported_solutions, reallocate_account,
+        AllocateAndAssignAccountArgs, ReallocateAccountArgs,
     },
     Solution,
 };
@@ -43,8 +43,8 @@ pub fn process<'a>(
             redeem,
             solutions,
         ),
-        AddSolutions { solutions, index } => {
-            process_add_solutions(program_id, accounts, solutions, index)
+        AddSolutions { solutions } => {
+            process_add_solutions(program_id, accounts, solutions)
         }
     }
 }
@@ -114,15 +114,15 @@ fn process_create_challenge<'a>(
 // -----------------
 // Add Solutions
 // -----------------
-fn process_add_solutions(
+fn process_add_solutions<'a>(
     _program_id: &Pubkey,
-    accounts: &[AccountInfo],
+    accounts: &'a [AccountInfo<'a>],
     extra_solutions: Vec<Solution>,
-    index: Option<u8>,
 ) -> ProgramResult {
     msg!("IX: add solutions");
 
     let account_info_iter = &mut accounts.iter();
+    let payer_info = next_account_info(account_info_iter)?;
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
@@ -133,10 +133,12 @@ fn process_add_solutions(
         "PDA for the challenge for this creator is incorrect",
     )?;
 
-    let challenge_data = &challenge_pda_info.try_borrow_data()?;
-    let challenge_data_len = challenge_data.len();
-    let mut challenge = try_from_slice_unchecked::<Challenge>(challenge_data)?;
+    let mut challenge = {
+        let challenge_data = &challenge_pda_info.try_borrow_data()?;
+        try_from_slice_unchecked::<Challenge>(challenge_data)?
+    };
 
+    // TODO(thlorenz): @@@ check that extra_solutions is not empty
     // TODO(thlorenz): @@@ check creator is signer
     assert_keys_equal(
         creator_info.key,
@@ -144,25 +146,26 @@ fn process_add_solutions(
         "creator does not match challenge authority",
     )?;
 
-    let index = index.unwrap_or(challenge.solutions.len() as u8);
-    let max_solutions = Challenge::max_solutions(challenge_data_len);
-    let solutions = &mut challenge.solutions;
+    // 1. append solutions
+    assert_can_add_solutions(&challenge.solutions, &extra_solutions)?;
+    challenge.solutions.extend(extra_solutions);
 
-    msg!(
-        "Can we add solutions at index {} if max is {}?",
-        index,
-        max_solutions
-    );
-    assert_can_add_solutions_at_index(
-        solutions,
-        &extra_solutions,
-        index,
-        max_solutions,
-    )?;
+    // Small example showing that unsafe code is fine
+    let size = unsafe {
+        let mut s = challenge.size();
+        let s_ptr = &mut s as *mut usize;
+        *s_ptr += 1;
 
-    // TODO(thlorenz): @@@ Run tests to see if this works and why we don't need seeds here
-    solutions.truncate(index as usize);
-    solutions.extend(extra_solutions);
+        *s_ptr as usize
+    };
+
+    // 2. reallocate account to fit extra solutions, including upping lamports to stay rent excempt
+    reallocate_account(ReallocateAccountArgs {
+        payer_info,
+        account_info: challenge_pda_info,
+        new_size: size - 1,
+        zero_init: false,
+    })?;
 
     challenge.serialize(
         &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),

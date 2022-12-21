@@ -22,14 +22,15 @@ pub enum ChallengeInstruction {
         solutions: Vec<Solution>,
     },
 
+    /// Appends solutions to the end of the solutions array, keeping existing solutions in place.
     AddSolutions {
         /// The solutions to add to the challenge
         solutions: Vec<Solution>,
-        /// The index at which to insert them
-        /// If this is not provided then solutions will be appended to existing solutions.
-        /// Including it allows replacing existing solutions.
-        index: Option<u8>,
     },
+    // TODO(thlorenz): may need some ixs for creators that want to mutate solutions, i.e.
+    //  - add solutions at index (replacing existing ones)
+    //  - replace solution at index
+    //  - clear solutions
 }
 
 // -----------------
@@ -82,15 +83,16 @@ pub fn create_challenge(
 
 /// Adds solutions to an existing challenge and can be invoked multiple times.
 ///
+/// * [payer]: pays for the transaction and is usually the creator
 /// * [creator]: the authority managing the challenge
 /// * [solutions]: solutions to be added in clear text, they are encoded via
 ///   `sha256(sha256(solution))` before being passed on to the program
 /// * [index]: the index at which to insert the solutions
 ///   if provided solutions starting at that index are replaced, otherwise they are appended
 pub fn add_solutions(
+    payer: Pubkey,
     creator: Pubkey,
     solutions: Vec<&str>,
-    index: Option<u8>,
 ) -> Result<Instruction, ProgramError> {
     let (challenge_pda, _) = Challenge::shank_pda(&challenge_id(), &creator);
     let solutions = hash_solutions(&solutions);
@@ -98,12 +100,12 @@ pub fn add_solutions(
     let ix = Instruction {
         program_id: challenge_id(),
         accounts: vec![
+            AccountMeta::new(payer, true),
             AccountMeta::new_readonly(creator, true),
             AccountMeta::new(challenge_pda, false),
-            AccountMeta::new_readonly(challenge_id(), false),
+            AccountMeta::new_readonly(system_program::id(), false),
         ],
-        data: ChallengeInstruction::AddSolutions { solutions, index }
-            .try_to_vec()?,
+        data: ChallengeInstruction::AddSolutions { solutions }.try_to_vec()?,
     };
 
     Ok(ix)

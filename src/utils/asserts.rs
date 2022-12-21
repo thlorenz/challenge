@@ -30,22 +30,22 @@ pub fn assert_max_supported_solutions(solutions: &[Solution]) -> ProgramResult {
     }
 }
 
-pub fn assert_can_add_solutions_at_index(
+pub fn assert_can_add_solutions(
     solutions: &[Solution],
     extra_solutions: &[Solution],
-    index: u8,
-    max_solutions: u8,
 ) -> ProgramResult {
-    assert_max_supported_solutions(extra_solutions)?;
-    let extra_solutions_len = extra_solutions.len() as u8;
+    let solutions_len = solutions.len();
+    let extra_solutions_len = extra_solutions.len();
 
-    let final_index = index + extra_solutions_len;
-    if final_index > max_solutions {
-        msg!("Err: adding {} solutions at index {} would exceed max_solutions {}", extra_solutions_len, index, max_solutions);
-        Err(ChallengeError::ExceedingMaxAllocatedSolutions.into())
-    } else if index as usize > solutions.len() {
-        msg!("Err: Adding solutions at index ({}) would create a hole in the solutions array of len ({})", index, solutions.len());
-        Err(ChallengeError::SolutionArrayCannotBeSparse.into())
+    let final_len = solutions_len.saturating_add(extra_solutions_len);
+    if final_len > u8::MAX as usize {
+        msg!(
+            "Err: adding {} solutions would result in {} total solutions which exceeds max supported {}",
+            extra_solutions_len,
+            final_len,
+            u8::MAX
+        );
+        Err(ChallengeError::ExceedingMaxSupportedSolutions.into())
     } else {
         Ok(())
     }

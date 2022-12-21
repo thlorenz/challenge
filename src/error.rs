@@ -32,11 +32,6 @@ pub enum ChallengeError {
     #[error("Adding solutions would exceed max_solutions")]
     ExceedingMaxAllocatedSolutions,
 
-    #[error(
-        "Adding solutions at index would create a hole in the solutions array"
-    )]
-    SolutionArrayCannotBeSparse,
-
     #[error("Account should have address")]
     AccountShouldHaveAddress,
 

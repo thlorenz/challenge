@@ -1,6 +1,9 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use shank::ShankAccount;
-use solana_program::{hash::HASH_BYTES, pubkey::Pubkey};
+use solana_program::{
+    hash::HASH_BYTES, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
+    sysvar::Sysvar,
+};
 
 use crate::Solution;
 
@@ -63,15 +66,16 @@ impl Challenge {
         solutions_len as usize * HASH_BYTES
     }
 
-    pub fn max_solutions(data_len: usize) -> u8 {
-        // Alternatively we could just read the vec len at solutions index
-        let els_size = data_len - EMPTY_CHALLENGE_SIZE;
-        (els_size / HASH_BYTES) as u8
-    }
-
     /// Returns the size assuming no more solutions will be added.
     pub fn size(&self) -> usize {
         Challenge::needed_size(&self.solutions)
+    }
+
+    /// Only use on-chain as Rent::get is not available otherwise.
+    #[allow(unused)]
+    pub(crate) fn rent_exempt_lamports(&self) -> Result<u64, ProgramError> {
+        let rent = Rent::get()?;
+        Ok(rent.minimum_balance(self.size()))
     }
 }
 
