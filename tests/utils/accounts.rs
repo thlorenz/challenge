@@ -1,10 +1,13 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use challenge::{challenge_id, state::Challenge};
+use challenge::{challenge_id, state::Challenge, utils::hash_solutions};
 use solana_program::{
     borsh::try_from_slice_unchecked, pubkey::Pubkey, rent::Rent,
 };
 use solana_program_test::ProgramTestContext;
-use solana_sdk::account::{Account, AccountSharedData};
+use solana_sdk::{
+    account::{Account, AccountSharedData},
+    signer::Signer,
+};
 
 #[allow(unused)] // it actually is in 01_create_challenge.rs
 pub async fn get_deserialized<T: BorshDeserialize>(
@@ -57,4 +60,50 @@ pub fn add_challenge_account(
     context.set_account(&address, &account);
 
     account
+}
+
+#[allow(unused)] // it actually is in 02_add_solutions.rs
+pub fn add_challenge_with_solutions(
+    context: &mut ProgramTestContext,
+    id: &str,
+    solutions: Vec<&str>,
+    authority: Option<Pubkey>,
+) -> AccountSharedData {
+    let solutions = hash_solutions(&solutions);
+    add_challenge_account(
+        context,
+        Challenge {
+            authority: authority.unwrap_or_else(|| context.payer.pubkey()),
+            id: id.to_string(),
+            started: false,
+            admit_cost: 200,
+            tries_per_admit: 1,
+            redeem: Pubkey::new_unique(),
+            solving: 0,
+            solutions,
+        },
+    )
+}
+
+#[allow(unused)] // it actually is in 02_add_solutions.rs
+pub fn add_started_challenge_with_solutions(
+    context: &mut ProgramTestContext,
+    id: &str,
+    solutions: Vec<&str>,
+    authority: Option<Pubkey>,
+) -> AccountSharedData {
+    let solutions = hash_solutions(&solutions);
+    add_challenge_account(
+        context,
+        Challenge {
+            authority: authority.unwrap_or_else(|| context.payer.pubkey()),
+            id: id.to_string(),
+            started: true,
+            admit_cost: 200,
+            tries_per_admit: 1,
+            redeem: Pubkey::new_unique(),
+            solving: 0,
+            solutions,
+        },
+    )
 }

@@ -10,44 +10,20 @@ use challenge::{
 };
 use solana_program::{
     instruction::{AccountMeta, Instruction},
-    pubkey::Pubkey,
     system_program,
 };
 use solana_program_test::*;
 
 use solana_sdk::{
-    account::{AccountSharedData, ReadableAccount},
-    signature::Keypair,
-    signer::Signer,
+    account::ReadableAccount, signature::Keypair, signer::Signer,
     transaction::Transaction,
 };
-use utils::add_challenge_account;
+use utils::add_challenge_with_solutions;
 
 use crate::utils::{get_deserialized, hash_solution, program_test};
 
 mod utils;
 const ID: &str = "challenge-id";
-
-fn add_challenge_with_solutions(
-    context: &mut ProgramTestContext,
-    id: &str,
-    solutions: Vec<&str>,
-    authority: Option<Pubkey>,
-) -> AccountSharedData {
-    let solutions = hash_solutions(&solutions);
-    add_challenge_account(
-        context,
-        Challenge {
-            authority: authority.unwrap_or_else(|| context.payer.pubkey()),
-            id: id.to_string(),
-            admit_cost: 200,
-            tries_per_admit: 1,
-            redeem: Pubkey::new_unique(),
-            solving: 0,
-            solutions,
-        },
-    )
-}
 
 #[tokio::test]
 async fn add_solutions_creator_pays_to_empty_solutions() {
@@ -89,6 +65,7 @@ async fn add_solutions_creator_pays_to_empty_solutions() {
         Challenge {
             authority,
             id,
+            started: false,
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: _,
@@ -152,6 +129,7 @@ async fn add_solutions_creator_not_payer_to_empty_solutions() {
         Challenge {
             authority,
             id,
+            started: false,
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: _,
@@ -213,6 +191,7 @@ async fn add_solutions_creator_pays_to_two_solutions() {
         Challenge {
             authority,
             id,
+            started: false,
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: _,

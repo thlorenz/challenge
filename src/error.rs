@@ -11,20 +11,17 @@ pub enum ChallengeError {
     // -----------------
     // Security
     // -----------------
-    #[error("You are not authorized to perform this action.")]
-    Unauthorized = 0x11c7ac,
-
     #[error("Account should be signer")]
-    AccountShouldBeSigner,
-
-    #[error("Provided PDA does not match the expected PDA")]
-    ProvidedPdaIsIncorrect,
+    AccountShouldBeSigner = 0x11c7ac,
 
     #[error("Provided ATA does not match the expected ATA")]
     ProvidedAtaIsIncorrect,
 
-    #[error("Account should be program")]
-    AccountShouldBeProgram,
+    // -----------------
+    // Create Challenge
+    // -----------------
+    #[error("Account not funded")]
+    AccountNotFunded,
 
     // -----------------
     // Adding Solutions
@@ -32,14 +29,8 @@ pub enum ChallengeError {
     #[error("Amount of solutions exceeds maximum supported solutions ")]
     ExceedingMaxSupportedSolutions,
 
-    #[error("Adding solutions would exceed max_solutions")]
-    ExceedingMaxAllocatedSolutions,
-
     #[error("When adding solutions you need to provide at least one solution")]
     NoSolutionsToAddProvided,
-
-    #[error("Account should have address")]
-    AccountShouldHaveAddress,
 
     #[error("Account has data but was expected to be empty")]
     AccountAlreadyHasData,
@@ -47,17 +38,18 @@ pub enum ChallengeError {
     #[error("Account has no data")]
     AccountHasNoData,
 
-    #[error("Account not funded")]
-    AccountNotFunded,
+    // -----------------
+    // Starting Challenge
+    // -----------------
+    #[error("Challenge was started already and cannot be started again")]
+    ChallengeAlreadyStarted,
 
-    #[error(
-        "ATA Account is not correctly derived from the Challenger Account"
-    )]
-    ATAIsNotForChallenger,
+    #[error("Challenge has no solutions and thus cannot be started")]
+    ChallengeHasNoSolutions,
 
-    #[error("ATA Account data is empty")]
-    ATAIsNotInitialized,
-
+    // -----------------
+    // Misc
+    // -----------------
     #[error("Payer does not have sufficient lamports to fund the operation")]
     InsufficientFunds,
 }

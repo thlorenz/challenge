@@ -2,7 +2,7 @@ use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, pubkey::Pubkey,
 };
 
-use crate::{error::ChallengeError, Solution};
+use crate::{error::ChallengeError, state::Challenge, Solution};
 
 pub fn assert_keys_equal<F: FnOnce() -> String>(
     provided_key: &Pubkey,
@@ -100,6 +100,31 @@ pub fn assert_is_signer(
             account.key
         );
         Err(ChallengeError::AccountShouldBeSigner.into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn assert_not_started(challenge: &Challenge) -> ProgramResult {
+    if challenge.started {
+        msg!("Err: challenge '{}' has already started", challenge.id);
+        Err(ChallengeError::ChallengeAlreadyStarted.into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn assert_has_solutions(
+    challenge: &Challenge,
+    task: &str,
+) -> ProgramResult {
+    if challenge.solutions.is_empty() {
+        msg!(
+            "Err: challenge '{}' has no solutions and thus cannot {}.",
+            challenge.id,
+            task
+        );
+        Err(ChallengeError::ChallengeHasNoSolutions.into())
     } else {
         Ok(())
     }
