@@ -56,7 +56,7 @@ async fn create_challenge_without_solutions() {
         Challenge {
             authority,
             id,
-            ready: false,
+            started: false,
             admit_cost: 1000,
             tries_per_admit: 1,
             redeem: r,
@@ -113,7 +113,7 @@ async fn create_challenge_with_two_solutions() {
         Challenge {
             authority,
             id,
-            ready: false,
+            started: false,
             admit_cost: 1000,
             tries_per_admit: 1,
             redeem: r,
@@ -206,7 +206,7 @@ async fn create_two_challenges_same_creator_different_id() {
             Challenge {
                 authority,
                 id,
-                ready: false,
+                started: false,
                 admit_cost: 1000,
                 tries_per_admit: 1,
                 redeem: r,
@@ -236,7 +236,7 @@ async fn create_two_challenges_same_creator_different_id() {
             Challenge {
                 authority,
                 id,
-                ready: false,
+                started: false,
                 admit_cost: 2000,
                 tries_per_admit: 2,
                 redeem: r,

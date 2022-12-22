@@ -1,7 +1,6 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
-    borsh::try_from_slice_unchecked,
     entrypoint::ProgramResult,
     msg,
     pubkey::Pubkey,
@@ -13,14 +12,17 @@ use crate::{
     state::{Challenge, MutableChallengeFromData},
     utils::{
         allocate_account_and_assign_owner, assert_account_has_no_data,
-        assert_account_is_funded_and_has_data, assert_adding_non_empty,
-        assert_can_add_solutions, assert_is_signer, assert_keys_equal,
-        assert_max_supported_solutions, reallocate_account,
+        assert_adding_non_empty, assert_can_add_solutions,
+        assert_has_solutions, assert_keys_equal,
+        assert_max_supported_solutions, assert_not_started, reallocate_account,
         AllocateAndAssignAccountArgs, ReallocateAccountArgs,
     },
     Solution,
 };
 
+// -----------------
+// Processor Entry
+// -----------------
 pub fn process<'a>(
     program_id: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
@@ -49,6 +51,9 @@ pub fn process<'a>(
         ),
         AddSolutions { id, solutions } => {
             process_add_solutions(program_id, accounts, id, solutions)
+        }
+        StartChallenge { id } => {
+            process_start_challenge(program_id, accounts, id)
         }
     }
 }
@@ -113,7 +118,7 @@ fn process_create_challenge<'a>(
     let challenge = Challenge {
         authority: *creator_info.key,
         id,
-        ready: false,
+        started: false,
         admit_cost,
         tries_per_admit,
         redeem,
@@ -179,11 +184,14 @@ fn process_add_solutions<'a>(
 }
 
 // -----------------
-// Declare Ready
+// Start Challenge
 // -----------------
-/*
-fn process_declare_ready(program_id: &Pubkey) -> ProgramResult {
-    msg!("IX: create challenge");
+fn process_start_challenge(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    id: String,
+) -> ProgramResult {
+    msg!("IX: start challenge");
 
     assert_keys_equal(program_id, &challenge_id(), || {
         format!(
@@ -194,10 +202,19 @@ fn process_declare_ready(program_id: &Pubkey) -> ProgramResult {
     })?;
 
     let account_info_iter = &mut accounts.iter();
-    let payer_info = next_account_info(account_info_iter)?;
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
+    let MutableChallengeFromData { mut challenge, .. } =
+        Challenge::mutable_from_data(challenge_pda_info, creator_info, &id)?;
+
+    assert_not_started(&challenge)?;
+    assert_has_solutions(&challenge, "be started")?;
+
+    challenge.started = true;
+    challenge.serialize(
+        &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),
+    )?;
+
     Ok(())
 }
-*/

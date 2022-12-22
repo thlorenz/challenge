@@ -29,6 +29,10 @@ pub enum ChallengeInstruction {
         /// The solutions to add to the challenge
         solutions: Vec<Solution>,
     },
+
+    StartChallenge {
+        id: String,
+    },
     // TODO(thlorenz): may need some ixs for creators that want to mutate solutions, i.e.
     //  - add solutions at index (replacing existing ones)
     //  - replace solution at index
@@ -116,6 +120,28 @@ pub fn add_solutions(
         ],
         data: ChallengeInstruction::AddSolutions { id, solutions }
             .try_to_vec()?,
+    };
+
+    Ok(ix)
+}
+
+// -----------------
+// Start Challenge
+// -----------------
+pub fn start_challenge(
+    creator: Pubkey,
+    id: String,
+) -> Result<Instruction, ProgramError> {
+    let (challenge_pda, _) =
+        Challenge::shank_pda(&challenge_id(), &creator, &id);
+
+    let ix = Instruction {
+        program_id: challenge_id(),
+        accounts: vec![
+            AccountMeta::new_readonly(creator, true),
+            AccountMeta::new(challenge_pda, false),
+        ],
+        data: ChallengeInstruction::StartChallenge { id }.try_to_vec()?,
     };
 
     Ok(ix)

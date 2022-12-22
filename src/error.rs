@@ -41,8 +41,11 @@ pub enum ChallengeError {
     // -----------------
     // Starting Challenge
     // -----------------
-    #[error("Challenge was started already and can not be started again")]
+    #[error("Challenge was started already and cannot be started again")]
     ChallengeAlreadyStarted,
+
+    #[error("Challenge has no solutions and thus cannot be started")]
+    ChallengeHasNoSolutions,
 
     // -----------------
     // Misc

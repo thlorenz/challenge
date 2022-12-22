@@ -38,9 +38,9 @@ pub struct Challenge {
     /// The id of the challenge, needs to be unique for the creator.
     pub id: String,
 
-    /// Indicates if the challenge is ready to accept challengers.
+    /// Indicates if the challenge has started and is ready to accept challengers.
     /// If not it won't admit nor redeem to anyone.
-    pub ready: bool,
+    pub started: bool,
 
     /// The fee that will be transferred to the creator from the challenger account
     /// when the admit instruction is processed.
