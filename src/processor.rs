@@ -105,6 +105,7 @@ fn process_create_challenge<'a>(
     let challenge = Challenge {
         authority: *creator_info.key,
         id,
+        ready: false,
         admit_cost,
         tries_per_admit,
         redeem,

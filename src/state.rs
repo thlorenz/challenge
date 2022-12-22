@@ -24,18 +24,32 @@ use crate::Solution;
 ///     without requiring the signature of the `authority`.
 ///   - however adding solutions requires the authority to sign
 pub struct Challenge {
+    /// The authority that can update the challenge, normally the creator.
     pub authority: Pubkey,
+
+    /// The id of the challenge, needs to be unique for the creator.
     pub id: String,
 
+    /// Indicates if the challenge is ready to accept challengers.
+    /// If not it won't admit nor redeem to anyone.
+    pub ready: bool,
+
+    /// The fee that will be transferred to the creator from the challenger account
+    /// when the admit instruction is processed.
     pub admit_cost: u64,
+
+    /// Determines how many solutions a challenger can send per admission to try to redeem.
     pub tries_per_admit: u8,
 
     // TODO(thlorenz): make sure this works for NFTS or create an NFTChallenge
     // which is the same thing except that redeem integrates with TokenMetadata program
     pub redeem: Pubkey,
 
+    /// The index of the solution that needs to be found next
     pub solving: u8,
 
+    /// All solutions of the challenge, solving each will result in the redeem
+    /// to be sent to the challenger.
     pub solutions: Vec<Solution>,
 }
 
@@ -57,6 +71,7 @@ impl std::fmt::Debug for Challenge {
 pub const EMPTY_CHALLENGE_SIZE_WITH_EMPTY_ID: usize =
     /* authority */      32 + 
     /* id */              4 + /* does not include string len */
+    /* ready */           1 +
     /* admit_cost */      8 +
     /* tries_per_admit */ 1 +
     /* redeem */         32 +

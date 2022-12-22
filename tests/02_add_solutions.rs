@@ -40,6 +40,7 @@ fn add_challenge_with_solutions(
         Challenge {
             authority: authority.unwrap_or_else(|| context.payer.pubkey()),
             id: id.to_string(),
+            ready: false,
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: Pubkey::new_unique(),
@@ -89,6 +90,7 @@ async fn add_solutions_creator_pays_to_empty_solutions() {
         Challenge {
             authority,
             id,
+            ready: false,
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: _,
@@ -152,6 +154,7 @@ async fn add_solutions_creator_not_payer_to_empty_solutions() {
         Challenge {
             authority,
             id,
+            ready: false,
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: _,
@@ -213,6 +216,7 @@ async fn add_solutions_creator_pays_to_two_solutions() {
         Challenge {
             authority,
             id,
+            ready: false,
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: _,
