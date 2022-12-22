@@ -10,7 +10,7 @@ use solana_program::{
 use crate::{
     challenge_id, check_id,
     ixs::ChallengeInstruction,
-    state::Challenge,
+    state::{Challenge, MutableChallengeFromData},
     utils::{
         allocate_account_and_assign_owner, assert_account_has_no_data,
         assert_account_is_funded_and_has_data, assert_adding_non_empty,
@@ -66,6 +66,14 @@ fn process_create_challenge<'a>(
     solutions: Vec<Solution>,
 ) -> ProgramResult {
     msg!("IX: create challenge");
+
+    assert_keys_equal(program_id, &challenge_id(), || {
+        format!(
+            "Provided program id ({}) does not match this program's id ({})",
+            program_id,
+            challenge_id()
+        )
+    })?;
 
     assert_max_supported_solutions(&solutions)?;
 
@@ -126,13 +134,20 @@ fn process_create_challenge<'a>(
 // Add Solutions
 // -----------------
 fn process_add_solutions<'a>(
-    _program_id: &Pubkey,
+    program_id: &Pubkey,
     accounts: &'a [AccountInfo<'a>],
     id: String,
     extra_solutions: Vec<Solution>,
 ) -> ProgramResult {
     msg!("IX: add solutions");
 
+    assert_keys_equal(program_id, &challenge_id(), || {
+        format!(
+            "Provided program id ({}) does not match this program's id ({})",
+            program_id,
+            challenge_id()
+        )
+    })?;
     assert_adding_non_empty(&extra_solutions)?;
 
     let account_info_iter = &mut accounts.iter();
@@ -140,23 +155,8 @@ fn process_add_solutions<'a>(
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
-    let (pda, _bump) =
-        Challenge::shank_pda(&challenge_id(), creator_info.key, &id);
-
-    assert_keys_equal(challenge_pda_info.key, &pda, || {
-        format!(
-            "PDA for the challenge for creator ({}) and id ({}) is incorrect",
-            creator_info.key, id
-        )
-    })?;
-    assert_account_is_funded_and_has_data(challenge_pda_info)?;
-
-    let mut challenge = {
-        let challenge_data = &challenge_pda_info.try_borrow_data()?;
-        try_from_slice_unchecked::<Challenge>(challenge_data)?
-    };
-
-    assert_is_signer(creator_info, "creator")?;
+    let MutableChallengeFromData { mut challenge, .. } =
+        Challenge::mutable_from_data(challenge_pda_info, creator_info, &id)?;
 
     // 1. append solutions
     assert_can_add_solutions(&challenge.solutions, &extra_solutions)?;
@@ -177,3 +177,27 @@ fn process_add_solutions<'a>(
 
     Ok(())
 }
+
+// -----------------
+// Declare Ready
+// -----------------
+/*
+fn process_declare_ready(program_id: &Pubkey) -> ProgramResult {
+    msg!("IX: create challenge");
+
+    assert_keys_equal(program_id, &challenge_id(), || {
+        format!(
+            "Provided program id ({}) does not match this program's id ({})",
+            program_id,
+            challenge_id()
+        )
+    })?;
+
+    let account_info_iter = &mut accounts.iter();
+    let payer_info = next_account_info(account_info_iter)?;
+    let creator_info = next_account_info(account_info_iter)?;
+    let challenge_pda_info = next_account_info(account_info_iter)?;
+
+    Ok(())
+}
+*/
