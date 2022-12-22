@@ -43,8 +43,11 @@ pub fn add_challenge_account(
     context: &mut ProgramTestContext,
     challenge: Challenge,
 ) -> AccountSharedData {
-    let (address, _) =
-        Challenge::shank_pda(&challenge_id(), &challenge.authority);
+    let (address, _) = Challenge::shank_pda(
+        &challenge_id(),
+        &challenge.authority,
+        &challenge.id,
+    );
 
     let lamports = rent_exempt_lamports(&challenge);
     let space = challenge.size();

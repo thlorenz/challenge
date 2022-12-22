@@ -33,6 +33,7 @@ pub fn process<'a>(
     use ChallengeInstruction::*;
     match instruction {
         CreateChallenge {
+            id,
             admit_cost,
             tries_per_admit,
             redeem,
@@ -40,13 +41,14 @@ pub fn process<'a>(
         } => process_create_challenge(
             program_id,
             accounts,
+            id,
             admit_cost,
             tries_per_admit,
             redeem,
             solutions,
         ),
-        AddSolutions { solutions } => {
-            process_add_solutions(program_id, accounts, solutions)
+        AddSolutions { id, solutions } => {
+            process_add_solutions(program_id, accounts, id, solutions)
         }
     }
 }
@@ -57,6 +59,7 @@ pub fn process<'a>(
 fn process_create_challenge<'a>(
     program_id: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
+    id: String,
     admit_cost: u64,
     tries_per_admit: u8,
     redeem: Pubkey,
@@ -76,20 +79,21 @@ fn process_create_challenge<'a>(
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
-    // TODO(thlorenz): this allows only one challenge per creator
-    //  allow passing another id or pubkey to identify the challenge
-    let (pda, bump) = Challenge::shank_pda(&challenge_id(), creator_info.key);
-    assert_keys_equal(
-        challenge_pda_info.key,
-        &pda,
-        "PDA for the challenge for this creator is incorrect",
-    )?;
+    let (pda, bump) =
+        Challenge::shank_pda(&challenge_id(), creator_info.key, &id);
+    assert_keys_equal(challenge_pda_info.key, &pda, || {
+        format!(
+            "PDA for the challenge for creator ({}) and id ({}) is incorrect",
+            creator_info.key, id
+        )
+    })?;
     assert_account_has_no_data(challenge_pda_info)?;
 
     let bump_arr = [bump];
-    let seeds = Challenge::shank_seeds_with_bump(creator_info.key, &bump_arr);
+    let seeds =
+        Challenge::shank_seeds_with_bump(creator_info.key, &id, &bump_arr);
 
-    let size = Challenge::needed_size(&solutions);
+    let size = Challenge::needed_size(&solutions, &id);
     allocate_account_and_assign_owner(AllocateAndAssignAccountArgs {
         payer_info,
         account_info: challenge_pda_info,
@@ -100,6 +104,7 @@ fn process_create_challenge<'a>(
 
     let challenge = Challenge {
         authority: *creator_info.key,
+        id,
         admit_cost,
         tries_per_admit,
         redeem,
@@ -122,6 +127,7 @@ fn process_create_challenge<'a>(
 fn process_add_solutions<'a>(
     _program_id: &Pubkey,
     accounts: &'a [AccountInfo<'a>],
+    id: String,
     extra_solutions: Vec<Solution>,
 ) -> ProgramResult {
     msg!("IX: add solutions");
@@ -133,13 +139,15 @@ fn process_add_solutions<'a>(
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
-    let (pda, _bump) = Challenge::shank_pda(&challenge_id(), creator_info.key);
+    let (pda, _bump) =
+        Challenge::shank_pda(&challenge_id(), creator_info.key, &id);
 
-    assert_keys_equal(
-        challenge_pda_info.key,
-        &pda,
-        "PDA for the challenge for this creator is incorrect",
-    )?;
+    assert_keys_equal(challenge_pda_info.key, &pda, || {
+        format!(
+            "PDA for the challenge for creator ({}) and id ({}) is incorrect",
+            creator_info.key, id
+        )
+    })?;
     assert_account_is_funded_and_has_data(challenge_pda_info)?;
 
     let mut challenge = {
@@ -147,11 +155,6 @@ fn process_add_solutions<'a>(
         try_from_slice_unchecked::<Challenge>(challenge_data)?
     };
 
-    assert_keys_equal(
-        creator_info.key,
-        &challenge.authority,
-        "creator does not match challenge authority",
-    )?;
     assert_is_signer(creator_info, "creator")?;
 
     // 1. append solutions

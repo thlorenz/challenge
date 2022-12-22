@@ -4,13 +4,13 @@ use solana_program::{
 
 use crate::{error::ChallengeError, Solution};
 
-pub fn assert_keys_equal(
+pub fn assert_keys_equal<F: FnOnce() -> String>(
     provided_key: &Pubkey,
     expected_key: &Pubkey,
-    msg: &str,
+    get_msg: F,
 ) -> ProgramResult {
     if provided_key.ne(expected_key) {
-        msg!("Err: {}", msg);
+        msg!("Err: {}", get_msg());
         msg!("Err: provided {} expected {}", provided_key, expected_key);
         Err(ChallengeError::ProvidedAtaIsIncorrect.into())
     } else {

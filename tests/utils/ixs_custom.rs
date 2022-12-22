@@ -11,6 +11,7 @@ use solana_program::{
 pub fn create_challenge_with_pda(
     payer: Pubkey,
     creator: Pubkey,
+    id: String,
     admit_cost: u64,
     tries_per_admit: u8,
     redeem: Pubkey,
@@ -25,6 +26,7 @@ pub fn create_challenge_with_pda(
             AccountMeta::new(challenge_pda, false),
         ],
         data: ChallengeInstruction::CreateChallenge {
+            id,
             admit_cost,
             tries_per_admit,
             redeem,

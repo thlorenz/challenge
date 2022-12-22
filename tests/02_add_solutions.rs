@@ -26,9 +26,11 @@ use utils::add_challenge_account;
 use crate::utils::{get_deserialized, hash_solution, program_test};
 
 mod utils;
+const ID: &str = "challenge-id";
 
 fn add_challenge_with_solutions(
     context: &mut ProgramTestContext,
+    id: &str,
     solutions: Vec<&str>,
     authority: Option<Pubkey>,
 ) -> AccountSharedData {
@@ -37,6 +39,7 @@ fn add_challenge_with_solutions(
         context,
         Challenge {
             authority: authority.unwrap_or_else(|| context.payer.pubkey()),
+            id: id.to_string(),
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: Pubkey::new_unique(),
@@ -50,14 +53,20 @@ fn add_challenge_with_solutions(
 async fn add_solutions_creator_pays_to_empty_solutions() {
     let mut context = program_test().start_with_context().await;
     let creator = context.payer.pubkey();
-    let added_acc = add_challenge_with_solutions(&mut context, vec![], None);
+    let added_acc =
+        add_challenge_with_solutions(&mut context, &ID, vec![], None);
 
     let (challenge_pda, _) =
-        Challenge::shank_pda(&challenge_id(), &context.payer.pubkey());
+        Challenge::shank_pda(&challenge_id(), &context.payer.pubkey(), ID);
 
     let solutions = vec!["hello", "world"];
-    let ix = ixs::add_solutions(context.payer.pubkey(), creator, solutions)
-        .expect("failed to create instruction");
+    let ix = ixs::add_solutions(
+        context.payer.pubkey(),
+        creator,
+        ID.to_string(),
+        solutions,
+    )
+    .expect("failed to create instruction");
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -79,6 +88,7 @@ async fn add_solutions_creator_pays_to_empty_solutions() {
         value,
         Challenge {
             authority,
+            id,
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: _,
@@ -86,10 +96,11 @@ async fn add_solutions_creator_pays_to_empty_solutions() {
             solutions,
         } => {
             assert_eq!(&authority, &creator);
+            assert_eq!(id, ID);
             assert_eq!(solutions.len(), 2);
             assert_eq!(solutions[0], hash_solution("hello"));
             assert_eq!(solutions[1], hash_solution("world"));
-            assert_eq!(acc.data.len(), Challenge::needed_size(&solutions));
+            assert_eq!(acc.data.len(), Challenge::needed_size(&solutions, ID));
             assert!(acc.lamports > added_acc.lamports(), "does transfer extra lamports");
         }
     );
@@ -102,15 +113,20 @@ async fn add_solutions_creator_not_payer_to_empty_solutions() {
 
     let added_acc = add_challenge_with_solutions(
         &mut context,
+        ID,
         vec![],
         Some(creator.pubkey()),
     );
 
     let solutions = vec!["hello", "world"];
 
-    let ix =
-        ixs::add_solutions(context.payer.pubkey(), creator.pubkey(), solutions)
-            .expect("failed to create instruction");
+    let ix = ixs::add_solutions(
+        context.payer.pubkey(),
+        creator.pubkey(),
+        ID.to_string(),
+        solutions,
+    )
+    .expect("failed to create instruction");
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -126,7 +142,7 @@ async fn add_solutions_creator_not_payer_to_empty_solutions() {
         .expect("Failed add solutions");
 
     let (challenge_pda, _) =
-        Challenge::shank_pda(&challenge_id(), &creator.pubkey());
+        Challenge::shank_pda(&challenge_id(), &creator.pubkey(), ID);
 
     let (acc, value) =
         get_deserialized::<Challenge>(&mut context, &challenge_pda).await;
@@ -135,6 +151,7 @@ async fn add_solutions_creator_not_payer_to_empty_solutions() {
         value,
         Challenge {
             authority,
+            id,
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: _,
@@ -142,10 +159,11 @@ async fn add_solutions_creator_not_payer_to_empty_solutions() {
             solutions,
         } => {
             assert_eq!(&authority, &creator.pubkey());
+            assert_eq!(id, ID);
             assert_eq!(solutions.len(), 2);
             assert_eq!(solutions[0], hash_solution("hello"));
             assert_eq!(solutions[1], hash_solution("world"));
-            assert_eq!(acc.data.len(), Challenge::needed_size(&solutions));
+            assert_eq!(acc.data.len(), Challenge::needed_size(&solutions, ID));
             assert!(acc.lamports > added_acc.lamports(), "does transfer extra lamports");
         }
     );
@@ -155,15 +173,24 @@ async fn add_solutions_creator_not_payer_to_empty_solutions() {
 async fn add_solutions_creator_pays_to_two_solutions() {
     let mut context = program_test().start_with_context().await;
     let creator = context.payer.pubkey();
-    let added_acc =
-        add_challenge_with_solutions(&mut context, vec!["hola", "mundo"], None);
+    let added_acc = add_challenge_with_solutions(
+        &mut context,
+        ID,
+        vec!["hola", "mundo"],
+        None,
+    );
 
     let (challenge_pda, _) =
-        Challenge::shank_pda(&challenge_id(), &context.payer.pubkey());
+        Challenge::shank_pda(&challenge_id(), &context.payer.pubkey(), ID);
 
     let solutions = vec!["hello", "world"];
-    let ix = ixs::add_solutions(context.payer.pubkey(), creator, solutions)
-        .expect("failed to create instruction");
+    let ix = ixs::add_solutions(
+        context.payer.pubkey(),
+        creator,
+        ID.to_string(),
+        solutions,
+    )
+    .expect("failed to create instruction");
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -185,6 +212,7 @@ async fn add_solutions_creator_pays_to_two_solutions() {
         value,
         Challenge {
             authority,
+            id,
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: _,
@@ -192,12 +220,13 @@ async fn add_solutions_creator_pays_to_two_solutions() {
             solutions,
         } => {
             assert_eq!(&authority, &creator);
+            assert_eq!(id, ID);
             assert_eq!(solutions.len(), 4);
             assert_eq!(solutions[0], hash_solution("hola"));
             assert_eq!(solutions[1], hash_solution("mundo"));
             assert_eq!(solutions[2], hash_solution("hello"));
             assert_eq!(solutions[3], hash_solution("world"));
-            assert_eq!(acc.data.len(), Challenge::needed_size(&solutions));
+            assert_eq!(acc.data.len(), Challenge::needed_size(&solutions, ID));
             assert!(acc.lamports > added_acc.lamports(), "does transfer extra lamports");
         }
     );
@@ -211,11 +240,16 @@ async fn add_solutions_creator_pays_to_two_solutions() {
 async fn add_solutions_with_empty_solutions() {
     let mut context = program_test().start_with_context().await;
     let creator = context.payer.pubkey();
-    add_challenge_with_solutions(&mut context, vec!["hola", "mundo"], None);
+    add_challenge_with_solutions(&mut context, ID, vec!["hola", "mundo"], None);
 
     let solutions = vec![];
-    let ix = ixs::add_solutions(context.payer.pubkey(), creator, solutions)
-        .expect("failed to create instruction");
+    let ix = ixs::add_solutions(
+        context.payer.pubkey(),
+        creator,
+        ID.to_string(),
+        solutions,
+    )
+    .expect("failed to create instruction");
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -238,8 +272,13 @@ async fn add_solutions_without_creating_account() {
     let creator = context.payer.pubkey();
 
     let solutions = vec!["hola", "mundo"];
-    let ix = ixs::add_solutions(context.payer.pubkey(), creator, solutions)
-        .expect("failed to create instruction");
+    let ix = ixs::add_solutions(
+        context.payer.pubkey(),
+        creator,
+        ID.to_string(),
+        solutions,
+    )
+    .expect("failed to create instruction");
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -260,14 +299,14 @@ async fn add_solutions_without_creating_account() {
 async fn add_solutions_with_invalid_creator() {
     let mut context = program_test().start_with_context().await;
     let creator = context.payer.pubkey();
-    add_challenge_with_solutions(&mut context, vec![], Some(creator));
+    add_challenge_with_solutions(&mut context, ID, vec![], Some(creator));
 
     let solutions = vec!["hola", "mundo"];
     let other_creator = Keypair::new();
 
     let ix = {
         let (challenge_pda, _) =
-            Challenge::shank_pda(&challenge_id(), &creator);
+            Challenge::shank_pda(&challenge_id(), &creator, ID);
         let solutions = hash_solutions(&solutions);
         Instruction {
             program_id: challenge_id(),
@@ -277,9 +316,12 @@ async fn add_solutions_with_invalid_creator() {
                 AccountMeta::new(challenge_pda, false),
                 AccountMeta::new_readonly(system_program::id(), false),
             ],
-            data: ChallengeInstruction::AddSolutions { solutions }
-                .try_to_vec()
-                .expect("failed to create custom instruction"),
+            data: ChallengeInstruction::AddSolutions {
+                id: ID.to_string(),
+                solutions,
+            }
+            .try_to_vec()
+            .expect("failed to create custom instruction"),
         }
     };
 
@@ -303,13 +345,13 @@ async fn add_solutions_with_creator_not_signer() {
     let mut context = program_test().start_with_context().await;
     let creator_pair = Keypair::new();
     let creator = creator_pair.pubkey();
-    add_challenge_with_solutions(&mut context, vec![], Some(creator));
+    add_challenge_with_solutions(&mut context, ID, vec![], Some(creator));
 
     let solutions = vec!["hola", "mundo"];
 
     let ix = {
         let (challenge_pda, _) =
-            Challenge::shank_pda(&challenge_id(), &creator);
+            Challenge::shank_pda(&challenge_id(), &creator, ID);
         let solutions = hash_solutions(&solutions);
         Instruction {
             program_id: challenge_id(),
@@ -319,9 +361,56 @@ async fn add_solutions_with_creator_not_signer() {
                 AccountMeta::new(challenge_pda, false),
                 AccountMeta::new_readonly(system_program::id(), false),
             ],
-            data: ChallengeInstruction::AddSolutions { solutions }
-                .try_to_vec()
-                .expect("failed to create custom instruction"),
+            data: ChallengeInstruction::AddSolutions {
+                id: ID.to_string(),
+                solutions,
+            }
+            .try_to_vec()
+            .expect("failed to create custom instruction"),
+        }
+    };
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("Failed add solutions");
+}
+
+#[tokio::test]
+#[should_panic]
+async fn add_solutions_creator_matches_but_id_is_different() {
+    let mut context = program_test().start_with_context().await;
+    let creator = context.payer.pubkey();
+    add_challenge_with_solutions(&mut context, ID, vec![], None);
+
+    let solutions = vec!["hello", "world"];
+
+    let ix = {
+        let (challenge_pda, _) =
+            Challenge::shank_pda(&challenge_id(), &creator, ID);
+        let solutions = hash_solutions(&solutions);
+        Instruction {
+            program_id: challenge_id(),
+            accounts: vec![
+                AccountMeta::new(context.payer.pubkey(), true),
+                AccountMeta::new_readonly(creator, true),
+                AccountMeta::new(challenge_pda, false),
+                AccountMeta::new_readonly(system_program::id(), false),
+            ],
+            data: ChallengeInstruction::AddSolutions {
+                id: "other_id".to_string(),
+                solutions,
+            }
+            .try_to_vec()
+            .expect("failed to create custom instruction"),
         }
     };
 
