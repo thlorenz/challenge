@@ -9,13 +9,15 @@ use solana_program::{
 use crate::{
     challenge_id, check_id,
     ixs::ChallengeInstruction,
-    state::{Challenge, Challenger, StateFromPdaAccountValue},
+    state::{
+        Challenge, Challenger, StateFromPdaAccountValue, TryStateFromAccount,
+    },
     utils::{
         allocate_account_and_assign_owner, assert_account_has_no_data,
         assert_adding_non_empty, assert_can_add_solutions,
         assert_has_solutions, assert_keys_equal,
         assert_max_supported_solutions, assert_not_started, reallocate_account,
-        AllocateAndAssignAccountArgs, ReallocateAccountArgs,
+        transfer_lamports, AllocateAndAssignAccountArgs, ReallocateAccountArgs,
     },
     Solution,
 };
@@ -55,6 +57,9 @@ pub fn process<'a>(
         StartChallenge { id } => {
             process_start_challenge(program_id, accounts, id)
         }
+        AdmitChallenger { challenge_pda } => {
+            process_admit_challenger(program_id, accounts, challenge_pda)
+        }
     }
 }
 
@@ -89,6 +94,10 @@ fn process_create_challenge<'a>(
 
     let account_info_iter = &mut accounts.iter();
     let payer_info = next_account_info(account_info_iter)?;
+
+    // TODO(thlorenz): make sure that the creator is rent excempt, as otherwise
+    // he won't be able to receive funds from admitted challengers
+    // Alternatively we can make sure of that here
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
@@ -251,6 +260,7 @@ fn process_admit_challenger<'a>(
 
     let account_info_iter = &mut accounts.iter();
     let payer_info = next_account_info(account_info_iter)?;
+    let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
     let challenger_info = next_account_info(account_info_iter)?;
     let challenger_pda_info = next_account_info(account_info_iter)?;
@@ -263,6 +273,7 @@ fn process_admit_challenger<'a>(
     })?;
     assert_account_has_no_data(challenger_pda_info)?;
 
+    // 1. create challenger account
     let (pda, bump) = Challenger::shank_pda(
         &challenge_id(),
         &challenge_pda,
@@ -292,12 +303,13 @@ fn process_admit_challenger<'a>(
         size,
     })?;
 
-    // TODO(thlorenz): @@@ transfer money to creator
+    // 2. initialize challenger account using data from the challenge
+    let challenge: Challenge = challenge_pda_info.try_state_from_account()?;
 
     let challenger = Challenger {
         authority: *challenger_info.key,
         challenge_pda,
-        tries_remaining: 1, // TODO(thlorenz): @@@ from challenge
+        tries_remaining: challenge.tries_per_admit,
         redeemed: false,
     };
 
@@ -305,7 +317,21 @@ fn process_admit_challenger<'a>(
         &mut &mut challenger_pda_info.try_borrow_mut_data()?.as_mut(),
     )?;
 
+    // 3. transfer admit cost to creator account
+    transfer_lamports(payer_info, creator_info, challenge.admit_cost)?;
+
+    // TODO(thlorenz): increase challenger count in challenge once (if) we track it
+
     msg!("Challenger admitted");
 
     Ok(())
 }
+
+// TODO(thlorenz): still missing the following instructions
+// -----------------
+// Propose Solution
+// -----------------
+
+// -----------------
+// Cashout to Creator
+// -----------------

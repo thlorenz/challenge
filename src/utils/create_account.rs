@@ -15,7 +15,7 @@ use crate::error::ChallengeError;
 // the Challenge PDA.
 // The required rent is deducted from the payer's account.
 #[inline(always)]
-fn transfer_lamports<'a>(
+pub fn transfer_lamports<'a>(
     payer_info: &AccountInfo<'a>,
     to_account_info: &AccountInfo<'a>,
     lamports: u64,

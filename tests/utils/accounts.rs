@@ -9,18 +9,25 @@ use solana_sdk::{
     signer::Signer,
 };
 
+#[allow(unused)]
+pub async fn get_account(
+    context: &mut ProgramTestContext,
+    pubkey: &Pubkey,
+) -> Account {
+    context
+        .banks_client
+        .get_account(*pubkey)
+        .await
+        .expect("get_account(): account not found")
+        .expect("get_account(): account empty")
+}
+
 #[allow(unused)] // it actually is in 01_create_challenge.rs
 pub async fn get_deserialized<T: BorshDeserialize>(
     context: &mut ProgramTestContext,
     pubkey: &Pubkey,
 ) -> (Account, T) {
-    let acc = context
-        .banks_client
-        .get_account(*pubkey)
-        .await
-        .expect("get_deserialized(): account not found")
-        .expect("get_deserialized(): account empty");
-
+    let acc = get_account(context, pubkey).await;
     let value: T =
         try_from_slice_unchecked(&acc.data).expect("Unable to deserialize");
     (acc, value)
@@ -39,6 +46,18 @@ pub async fn dump_account<T: BorshDeserialize + std::fmt::Debug>(
 pub fn rent_exempt_lamports(challenge: &Challenge) -> u64 {
     let rent = Rent::default();
     rent.minimum_balance(challenge.size())
+}
+
+pub async fn airdrop_rent(
+    context: &mut ProgramTestContext,
+    address: &Pubkey,
+    space: usize,
+) -> u64 {
+    let rent = Rent::default();
+    let lamports = rent.minimum_balance(space);
+    let account = AccountSharedData::new(lamports, space, address);
+    context.set_account(address, &account);
+    lamports
 }
 
 #[allow(unused)] // it actually is in 02_add_solutions.rs
