@@ -1,5 +1,9 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use challenge::{challenge_id, state::Challenge, utils::hash_solutions};
+use challenge::{
+    challenge_id,
+    state::{Challenge, Challenger, HasSize},
+    utils::hash_solutions,
+};
 use solana_program::{
     borsh::try_from_slice_unchecked, pubkey::Pubkey, rent::Rent,
 };
@@ -43,11 +47,12 @@ pub async fn dump_account<T: BorshDeserialize + std::fmt::Debug>(
     eprintln!("{:#?}", acc);
 }
 
-pub fn rent_exempt_lamports(challenge: &Challenge) -> u64 {
+pub fn rent_exempt_lamports<T: HasSize>(sized_acc: &T) -> u64 {
     let rent = Rent::default();
-    rent.minimum_balance(challenge.size())
+    rent.minimum_balance(sized_acc.size())
 }
 
+#[allow(unused)]
 pub async fn airdrop_rent(
     context: &mut ProgramTestContext,
     address: &Pubkey,
@@ -60,25 +65,52 @@ pub async fn airdrop_rent(
     lamports
 }
 
+#[allow(unused)]
+pub fn add_pda_account<
+    T: HasSize + BorshSerialize,
+    F: FnOnce() -> (Pubkey, u8),
+>(
+    context: &mut ProgramTestContext,
+    value: &T,
+    get_pda_and_bump: F,
+) -> Account {
+    let (address, _) = get_pda_and_bump();
+    let lamports = rent_exempt_lamports(value);
+    let space = value.size();
+
+    let mut account = AccountSharedData::new(lamports, space, &challenge_id());
+    account.set_data(value.try_to_vec().unwrap());
+    context.set_account(&address, &account);
+
+    account.into()
+}
+
 #[allow(unused)] // it actually is in 02_add_solutions.rs
 pub fn add_challenge_account(
     context: &mut ProgramTestContext,
     challenge: Challenge,
-) -> AccountSharedData {
-    let (address, _) = Challenge::shank_pda(
-        &challenge_id(),
-        &challenge.authority,
-        &challenge.id,
-    );
+) -> Account {
+    add_pda_account(context, &challenge, || {
+        Challenge::shank_pda(
+            &challenge_id(),
+            &challenge.authority,
+            &challenge.id,
+        )
+    })
+}
 
-    let lamports = rent_exempt_lamports(&challenge);
-    let space = challenge.size();
-
-    let mut account = AccountSharedData::new(lamports, space, &challenge_id());
-    account.set_data(challenge.try_to_vec().unwrap());
-    context.set_account(&address, &account);
-
-    account
+#[allow(unused)] // it actually is in 02_add_solutions.rs
+pub fn add_challenger_account(
+    context: &mut ProgramTestContext,
+    challenger: Challenger,
+) -> Account {
+    add_pda_account(context, &challenger, || {
+        Challenger::shank_pda(
+            &challenge_id(),
+            &challenger.challenge_pda,
+            &challenger.authority,
+        )
+    })
 }
 
 #[allow(unused)] // it actually is in 02_add_solutions.rs
@@ -87,7 +119,7 @@ pub fn add_challenge_with_solutions(
     id: &str,
     solutions: Vec<&str>,
     authority: Option<Pubkey>,
-) -> AccountSharedData {
+) -> Account {
     let solutions = hash_solutions(&solutions);
     add_challenge_account(
         context,
@@ -110,7 +142,7 @@ pub fn add_started_challenge_with_solutions(
     id: &str,
     solutions: Vec<&str>,
     authority: Option<Pubkey>,
-) -> AccountSharedData {
+) -> Account {
     let solutions = hash_solutions(&solutions);
     add_challenge_account(
         context,

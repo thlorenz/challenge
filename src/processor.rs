@@ -10,7 +10,8 @@ use crate::{
     challenge_id, check_id,
     ixs::ChallengeInstruction,
     state::{
-        Challenge, Challenger, StateFromPdaAccountValue, TryStateFromAccount,
+        Challenge, Challenger, HasSize, StateFromPdaAccountValue,
+        TryStateFromAccount,
     },
     utils::{
         allocate_account_and_assign_owner, assert_account_has_no_data,

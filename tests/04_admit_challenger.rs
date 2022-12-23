@@ -14,7 +14,7 @@ use solana_program_test::*;
 use solana_sdk::{signer::Signer, transaction::Transaction};
 #[allow(unused)]
 use utils::dump_account;
-use utils::{add_challenge_account, airdrop_rent};
+use utils::{add_challenge_account, add_challenger_account, airdrop_rent};
 
 use crate::utils::{get_account, get_deserialized, program_test};
 
@@ -98,3 +98,61 @@ async fn admit_challenger_to_started_challenge() {
 // -----------------
 // Error Cases
 // -----------------
+
+#[tokio::test]
+#[should_panic]
+async fn admit_challenger_trying_twice_for_same_challenge() {
+    let mut context = program_test().start_with_context().await;
+
+    let creator = Pubkey::new_unique();
+    airdrop_rent(&mut context, &creator, 0).await;
+
+    let payer = context.payer.pubkey();
+    let challenger = Pubkey::new_unique();
+
+    let solutions = hash_solutions(&["hello", "world"]);
+    let challenge_pda_acc = add_challenge_account(
+        &mut context,
+        Challenge {
+            authority: creator,
+            id: ID.to_string(),
+            started: true,
+            admit_cost: ADMIT_COST,
+            tries_per_admit: TRIES_PER_ADMIT,
+            redeem: Pubkey::new_unique(),
+            solving: 0,
+            solutions,
+        },
+    );
+    let challenge_pda = challenge_pda_acc.owner;
+
+    add_challenger_account(
+        &mut context,
+        Challenger {
+            authority: challenger,
+            challenge_pda,
+            tries_remaining: TRIES_PER_ADMIT,
+            redeemed: false,
+        },
+    );
+
+    let AdmitChallengerIx {
+        ix,
+        challenge_pda: _,
+        challenger_pda: _,
+    } = ixs::admit_challenger(payer, creator, ID, challenger)
+        .expect("failed to create instruction");
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("Failed to admit challenger");
+}

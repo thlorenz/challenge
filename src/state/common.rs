@@ -130,3 +130,10 @@ impl<'a, T: BorshDeserialize, F: FnOnce() -> (Pubkey, u8)>
         Ok(StateFromPdaAccountValue { state, pda, bump })
     }
 }
+
+// -----------------
+// Common Account Properties
+// -----------------
+pub trait HasSize {
+    fn size(&self) -> usize;
+}

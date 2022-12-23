@@ -11,7 +11,7 @@ use crate::{
     Solution,
 };
 
-use super::{StateFromPdaAccountValue, TryStateFromPdaAccount};
+use super::{HasSize, StateFromPdaAccountValue, TryStateFromPdaAccount};
 
 #[derive(ShankAccount, BorshSerialize, BorshDeserialize)]
 #[seeds(
@@ -86,6 +86,13 @@ pub const EMPTY_CHALLENGE_SIZE_WITH_EMPTY_ID: usize =
     /* solving */         1 +
     /* solutions */       4; // u32 for Vec::len
 
+impl HasSize for Challenge {
+    /// Returns the size assuming no more solutions will be added.
+    fn size(&self) -> usize {
+        Challenge::needed_size(&self.solutions, &self.id)
+    }
+}
+
 impl Challenge {
     pub fn needed_size(solutions: &[Solution], id: &str) -> usize {
         EMPTY_CHALLENGE_SIZE_WITH_EMPTY_ID
@@ -95,11 +102,6 @@ impl Challenge {
 
     pub fn space_to_store_n_solutions(solutions_len: u8) -> usize {
         solutions_len as usize * HASH_BYTES
-    }
-
-    /// Returns the size assuming no more solutions will be added.
-    pub fn size(&self) -> usize {
-        Challenge::needed_size(&self.solutions, &self.id)
     }
 
     /// Only use on-chain as Rent::get is not available otherwise.

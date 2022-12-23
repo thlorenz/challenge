@@ -2,6 +2,8 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use shank::ShankAccount;
 use solana_program::pubkey::Pubkey;
 
+use super::HasSize;
+
 #[derive(Debug, ShankAccount, BorshDeserialize, BorshSerialize)]
 #[seeds(
     "challenge",
@@ -21,6 +23,12 @@ pub const CHALLENGER_SIZE: usize =
     /* challenge_pda */  32 + 
     /* tries_remaining */ 1 +
     /* redeemed */        1;
+
+impl HasSize for Challenger {
+    fn size(&self) -> usize {
+        CHALLENGER_SIZE
+    }
+}
 
 impl Challenger {
     pub fn size() -> usize {
