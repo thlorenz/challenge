@@ -9,7 +9,7 @@ use solana_program::{
 use crate::{
     challenge_id, check_id,
     ixs::ChallengeInstruction,
-    state::{Challenge, MutableChallengeFromData},
+    state::{Challenge, StateFromPdaAccountValue},
     utils::{
         allocate_account_and_assign_owner, assert_account_has_no_data,
         assert_adding_non_empty, assert_can_add_solutions,
@@ -160,8 +160,14 @@ fn process_add_solutions<'a>(
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
-    let MutableChallengeFromData { mut challenge, .. } =
-        Challenge::mutable_from_data(challenge_pda_info, creator_info, &id)?;
+    let StateFromPdaAccountValue::<Challenge> {
+        state: mut challenge,
+        ..
+    } = Challenge::account_state_verifying_creator(
+        challenge_pda_info,
+        creator_info,
+        &id,
+    )?;
 
     // 1. append solutions
     assert_can_add_solutions(&challenge.solutions, &extra_solutions)?;
@@ -205,8 +211,14 @@ fn process_start_challenge(
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
-    let MutableChallengeFromData { mut challenge, .. } =
-        Challenge::mutable_from_data(challenge_pda_info, creator_info, &id)?;
+    let StateFromPdaAccountValue::<Challenge> {
+        state: mut challenge,
+        ..
+    } = Challenge::account_state_verifying_creator(
+        challenge_pda_info,
+        creator_info,
+        &id,
+    )?;
 
     assert_not_started(&challenge)?;
     assert_has_solutions(&challenge, "be started")?;
@@ -218,3 +230,50 @@ fn process_start_challenge(
 
     Ok(())
 }
+
+/* TODO(thlorenz): @@@ get to this once we finish with the trait stuff
+// -----------------
+// Admit Challenger
+// -----------------
+fn process_admit_challenger(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    challenge_pda: Pubkey,
+) -> ProgramResult {
+    msg!("IX: admit challenger");
+
+    assert_keys_equal(program_id, &challenge_id(), || {
+        format!(
+            "Provided program id ({}) does not match this program's id ({})",
+            program_id,
+            challenge_id()
+        )
+    })?;
+
+    let account_info_iter = &mut accounts.iter();
+    let creator_info = next_account_info(account_info_iter)?;
+    let challenge_pda_info = next_account_info(account_info_iter)?;
+    let challenger_info = next_account_info(account_info_iter)?;
+    let challenger_pda_info = next_account_info(account_info_iter)?;
+
+    assert_keys_equal(&challenge_pda, challenge_pda_info.key, || {
+        format!(
+                "Provided challenge pda ({}) key does not match the provided PDA account {})",
+                challenge_pda, challenge_pda_info.key
+            )
+    })?;
+
+    let PdaAccountInfo {
+        account: mut challenge,
+        ..
+    } = Challenge::mutable_from_data(challenge_pda_info)?;
+
+    assert_started(&challenge)?;
+
+    challenge.serialize(
+        &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),
+    )?;
+
+    Ok(())
+}
+*/

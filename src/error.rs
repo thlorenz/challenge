@@ -48,6 +48,13 @@ pub enum ChallengeError {
     ChallengeHasNoSolutions,
 
     // -----------------
+    // Admit
+    // -----------------
+    #[error(
+        "Challenge has not started yet and is not ready to admit challengers"
+    )]
+    ChallengeNotYetStarted,
+    // -----------------
     // Misc
     // -----------------
     #[error("Payer does not have sufficient lamports to fund the operation")]

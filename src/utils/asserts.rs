@@ -129,3 +129,12 @@ pub fn assert_has_solutions(
         Ok(())
     }
 }
+
+pub fn assert_started(challenge: &Challenge) -> ProgramResult {
+    if challenge.started {
+        msg!("Err: challenge '{}' has not yet started and is not admitting challengers", challenge.id);
+        Err(ChallengeError::ChallengeNotYetStarted.into())
+    } else {
+        Ok(())
+    }
+}
