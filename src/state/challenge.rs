@@ -79,7 +79,7 @@ impl std::fmt::Debug for Challenge {
 pub const EMPTY_CHALLENGE_SIZE_WITH_EMPTY_ID: usize =
     /* authority */      32 + 
     /* id */              4 + /* does not include string len */
-    /* ready */           1 +
+    /* started */         1 +
     /* admit_cost */      8 +
     /* tries_per_admit */ 1 +
     /* redeem */         32 +

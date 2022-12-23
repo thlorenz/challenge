@@ -9,7 +9,7 @@ use solana_program::{
 use crate::{
     challenge_id, check_id,
     ixs::ChallengeInstruction,
-    state::{Challenge, StateFromPdaAccountValue},
+    state::{Challenge, Challenger, StateFromPdaAccountValue},
     utils::{
         allocate_account_and_assign_owner, assert_account_has_no_data,
         assert_adding_non_empty, assert_can_add_solutions,
@@ -130,7 +130,7 @@ fn process_create_challenge<'a>(
         &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),
     )?;
 
-    msg!("Challenge account created and initialized ");
+    msg!("Challenge account created and initialized");
 
     Ok(())
 }
@@ -231,13 +231,12 @@ fn process_start_challenge(
     Ok(())
 }
 
-/* TODO(thlorenz): @@@ get to this once we finish with the trait stuff
 // -----------------
 // Admit Challenger
 // -----------------
-fn process_admit_challenger(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
+fn process_admit_challenger<'a>(
+    program_id: &'a Pubkey,
+    accounts: &'a [AccountInfo<'a>],
     challenge_pda: Pubkey,
 ) -> ProgramResult {
     msg!("IX: admit challenger");
@@ -251,29 +250,62 @@ fn process_admit_challenger(
     })?;
 
     let account_info_iter = &mut accounts.iter();
-    let creator_info = next_account_info(account_info_iter)?;
+    let payer_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
     let challenger_info = next_account_info(account_info_iter)?;
     let challenger_pda_info = next_account_info(account_info_iter)?;
 
-    assert_keys_equal(&challenge_pda, challenge_pda_info.key, || {
+    assert_keys_equal(challenge_pda_info.key, &challenge_pda, || {
         format!(
-                "Provided challenge pda ({}) key does not match the provided PDA account {})",
-                challenge_pda, challenge_pda_info.key
-            )
+            "Provided challenge pda ({}) does not match the PDA account ({}) provided in the instruction",
+            challenge_pda, challenge_pda_info.key
+        )
+    })?;
+    assert_account_has_no_data(challenger_pda_info)?;
+
+    let (pda, bump) = Challenger::shank_pda(
+        &challenge_id(),
+        &challenge_pda,
+        challenger_info.key,
+    );
+
+    assert_keys_equal(challenger_pda_info.key, &pda, || {
+        format!(
+            "PDA account ({}) provided for the challenger is not a valid for this challenge",
+            challenger_pda_info.key
+        )
     })?;
 
-    let PdaAccountInfo {
-        account: mut challenge,
-        ..
-    } = Challenge::mutable_from_data(challenge_pda_info)?;
+    let bump_arr = [bump];
+    let seeds = Challenger::shank_seeds_with_bump(
+        &challenge_pda,
+        challenger_info.key,
+        &bump_arr,
+    );
 
-    assert_started(&challenge)?;
+    let size = Challenger::size();
+    allocate_account_and_assign_owner(AllocateAndAssignAccountArgs {
+        payer_info,
+        account_info: challenger_pda_info,
+        owner: program_id,
+        signer_seeds: &seeds,
+        size,
+    })?;
 
-    challenge.serialize(
-        &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),
+    // TODO(thlorenz): @@@ transfer money to creator
+
+    let challenger = Challenger {
+        authority: *challenger_info.key,
+        challenge_pda,
+        tries_remaining: 1, // TODO(thlorenz): @@@ from challenge
+        redeemed: false,
+    };
+
+    challenger.serialize(
+        &mut &mut challenger_pda_info.try_borrow_mut_data()?.as_mut(),
     )?;
+
+    msg!("Challenger admitted");
 
     Ok(())
 }
-*/

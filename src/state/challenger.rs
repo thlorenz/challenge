@@ -1,10 +1,10 @@
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use shank::ShankAccount;
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey,
 };
 
-#[derive(Debug, ShankAccount, BorshDeserialize)]
+#[derive(Debug, ShankAccount, BorshDeserialize, BorshSerialize)]
 #[seeds(
     "challenge",
     challenge_pda("The challenge PDA that the challenger wants to solve."),
@@ -15,6 +15,19 @@ pub struct Challenger {
     pub challenge_pda: Pubkey,
     pub tries_remaining: u8,
     pub redeemed: bool,
+}
+
+#[rustfmt::skip]
+pub const CHALLENGER_SIZE: usize =
+    /* authority */      32 + 
+    /* challenge_pda */  32 + 
+    /* tries_remaining */ 1 +
+    /* redeemed */        1;
+
+impl Challenger {
+    pub fn size() -> usize {
+        CHALLENGER_SIZE
+    }
 }
 
 /* // TODO(thlorenz): @@@ Traits first
