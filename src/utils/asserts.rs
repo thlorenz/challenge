@@ -138,3 +138,22 @@ pub fn assert_started(challenge: &Challenge) -> ProgramResult {
         Ok(())
     }
 }
+
+pub fn assert_account_does_not_exist(
+    account: &AccountInfo,
+    acc_name: &str,
+) -> ProgramResult {
+    if account.owner.ne(&Pubkey::default())
+        || account.try_lamports()?.ne(&0)
+        || account.try_data_len()?.ne(&0)
+    {
+        msg!(
+            "Err: account '{}' ({}) exists already",
+            acc_name,
+            account.key,
+        );
+        Err(ChallengeError::AccountAlreadyExists.into())
+    } else {
+        Ok(())
+    }
+}

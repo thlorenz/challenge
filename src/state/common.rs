@@ -137,3 +137,7 @@ impl<'a, T: BorshDeserialize, F: FnOnce() -> (Pubkey, u8)>
 pub trait HasSize {
     fn size(&self) -> usize;
 }
+
+pub trait HasPda {
+    fn pda(&self) -> (Pubkey, u8);
+}

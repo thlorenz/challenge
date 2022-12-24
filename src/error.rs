@@ -32,6 +32,9 @@ pub enum ChallengeError {
     #[error("When adding solutions you need to provide at least one solution")]
     NoSolutionsToAddProvided,
 
+    #[error("Account was expected to not exists yet, but it does")]
+    AccountAlreadyExists,
+
     #[error("Account has data but was expected to be empty")]
     AccountAlreadyHasData,
 

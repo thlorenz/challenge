@@ -11,7 +11,9 @@ use crate::{
     Solution,
 };
 
-use super::{HasSize, StateFromPdaAccountValue, TryStateFromPdaAccount};
+use super::{
+    HasPda, HasSize, StateFromPdaAccountValue, TryStateFromPdaAccount,
+};
 
 #[derive(ShankAccount, BorshSerialize, BorshDeserialize)]
 #[seeds(
@@ -90,6 +92,12 @@ impl HasSize for Challenge {
     /// Returns the size assuming no more solutions will be added.
     fn size(&self) -> usize {
         Challenge::needed_size(&self.solutions, &self.id)
+    }
+}
+
+impl HasPda for Challenge {
+    fn pda(&self) -> (Pubkey, u8) {
+        Challenge::shank_pda(&challenge_id(), &self.authority, &self.id)
     }
 }
 

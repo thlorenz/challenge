@@ -1,7 +1,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use challenge::{
     challenge_id,
-    state::{Challenge, Challenger, HasSize},
+    state::{Challenge, HasPda, HasSize},
     utils::hash_solutions,
 };
 use solana_program::{
@@ -66,15 +66,11 @@ pub async fn airdrop_rent(
 }
 
 #[allow(unused)]
-pub fn add_pda_account<
-    T: HasSize + BorshSerialize,
-    F: FnOnce() -> (Pubkey, u8),
->(
+pub fn add_pda_account<T: HasSize + HasPda + BorshSerialize>(
     context: &mut ProgramTestContext,
     value: &T,
-    get_pda_and_bump: F,
 ) -> Account {
-    let (address, _) = get_pda_and_bump();
+    let (address, _) = value.pda();
     let lamports = rent_exempt_lamports(value);
     let space = value.size();
 
@@ -86,34 +82,6 @@ pub fn add_pda_account<
 }
 
 #[allow(unused)] // it actually is in 02_add_solutions.rs
-pub fn add_challenge_account(
-    context: &mut ProgramTestContext,
-    challenge: Challenge,
-) -> Account {
-    add_pda_account(context, &challenge, || {
-        Challenge::shank_pda(
-            &challenge_id(),
-            &challenge.authority,
-            &challenge.id,
-        )
-    })
-}
-
-#[allow(unused)] // it actually is in 02_add_solutions.rs
-pub fn add_challenger_account(
-    context: &mut ProgramTestContext,
-    challenger: Challenger,
-) -> Account {
-    add_pda_account(context, &challenger, || {
-        Challenger::shank_pda(
-            &challenge_id(),
-            &challenger.challenge_pda,
-            &challenger.authority,
-        )
-    })
-}
-
-#[allow(unused)] // it actually is in 02_add_solutions.rs
 pub fn add_challenge_with_solutions(
     context: &mut ProgramTestContext,
     id: &str,
@@ -121,9 +89,9 @@ pub fn add_challenge_with_solutions(
     authority: Option<Pubkey>,
 ) -> Account {
     let solutions = hash_solutions(&solutions);
-    add_challenge_account(
+    add_pda_account(
         context,
-        Challenge {
+        &Challenge {
             authority: authority.unwrap_or_else(|| context.payer.pubkey()),
             id: id.to_string(),
             started: false,
@@ -144,9 +112,9 @@ pub fn add_started_challenge_with_solutions(
     authority: Option<Pubkey>,
 ) -> Account {
     let solutions = hash_solutions(&solutions);
-    add_challenge_account(
+    add_pda_account(
         context,
-        Challenge {
+        &Challenge {
             authority: authority.unwrap_or_else(|| context.payer.pubkey()),
             id: id.to_string(),
             started: true,

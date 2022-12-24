@@ -4,17 +4,17 @@ use assert_matches::assert_matches;
 
 use challenge::{
     ixs::{self, AdmitChallengerIx},
-    state::{Challenge, Challenger},
+    state::{Challenge, Challenger, HasPda},
     utils::hash_solutions,
 };
 
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 
-use solana_sdk::{signer::Signer, transaction::Transaction};
 #[allow(unused)]
-use utils::dump_account;
-use utils::{add_challenge_account, add_challenger_account, airdrop_rent};
+use crate::utils::dump_account;
+use crate::utils::{add_pda_account, airdrop_rent};
+use solana_sdk::{signer::Signer, transaction::Transaction};
 
 use crate::utils::{get_account, get_deserialized, program_test};
 
@@ -35,9 +35,9 @@ async fn admit_challenger_to_started_challenge() {
     let challenger = Pubkey::new_unique();
 
     let solutions = hash_solutions(&["hello", "world"]);
-    add_challenge_account(
+    add_pda_account(
         &mut context,
-        Challenge {
+        &Challenge {
             authority: creator,
             id: ID.to_string(),
             started: true,
@@ -111,24 +111,24 @@ async fn admit_challenger_trying_twice_for_same_challenge() {
     let challenger = Pubkey::new_unique();
 
     let solutions = hash_solutions(&["hello", "world"]);
-    let challenge_pda_acc = add_challenge_account(
-        &mut context,
-        Challenge {
-            authority: creator,
-            id: ID.to_string(),
-            started: true,
-            admit_cost: ADMIT_COST,
-            tries_per_admit: TRIES_PER_ADMIT,
-            redeem: Pubkey::new_unique(),
-            solving: 0,
-            solutions,
-        },
-    );
-    let challenge_pda = challenge_pda_acc.owner;
 
-    add_challenger_account(
+    let challenge = Challenge {
+        authority: creator,
+        id: ID.to_string(),
+        started: true,
+        admit_cost: ADMIT_COST,
+        tries_per_admit: TRIES_PER_ADMIT,
+        redeem: Pubkey::new_unique(),
+        solving: 0,
+        solutions,
+    };
+
+    let (challenge_pda, _) = challenge.pda();
+    add_pda_account(&mut context, &challenge);
+
+    add_pda_account(
         &mut context,
-        Challenger {
+        &Challenger {
             authority: challenger,
             challenge_pda,
             tries_remaining: TRIES_PER_ADMIT,
