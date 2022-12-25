@@ -32,6 +32,9 @@ pub enum ChallengeError {
     #[error("When adding solutions you need to provide at least one solution")]
     NoSolutionsToAddProvided,
 
+    #[error("Account was expected to not exists yet, but it does")]
+    AccountAlreadyExists,
+
     #[error("Account has data but was expected to be empty")]
     AccountAlreadyHasData,
 
@@ -47,6 +50,13 @@ pub enum ChallengeError {
     #[error("Challenge has no solutions and thus cannot be started")]
     ChallengeHasNoSolutions,
 
+    // -----------------
+    // Admit
+    // -----------------
+    #[error(
+        "Challenge has not started yet and is not ready to admit challengers"
+    )]
+    ChallengeNotYetStarted,
     // -----------------
     // Misc
     // -----------------

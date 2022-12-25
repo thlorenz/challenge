@@ -9,13 +9,17 @@ use solana_program::{
 use crate::{
     challenge_id, check_id,
     ixs::ChallengeInstruction,
-    state::{Challenge, MutableChallengeFromData},
+    state::{
+        Challenge, Challenger, HasSize, StateFromPdaAccountValue,
+        TryStateFromAccount,
+    },
     utils::{
-        allocate_account_and_assign_owner, assert_account_has_no_data,
-        assert_adding_non_empty, assert_can_add_solutions,
-        assert_has_solutions, assert_keys_equal,
-        assert_max_supported_solutions, assert_not_started, reallocate_account,
-        AllocateAndAssignAccountArgs, ReallocateAccountArgs,
+        allocate_account_and_assign_owner, assert_account_does_not_exist,
+        assert_account_has_no_data, assert_adding_non_empty,
+        assert_can_add_solutions, assert_has_solutions, assert_keys_equal,
+        assert_max_supported_solutions, assert_not_started, assert_started,
+        reallocate_account, transfer_lamports, AllocateAndAssignAccountArgs,
+        ReallocateAccountArgs,
     },
     Solution,
 };
@@ -55,6 +59,9 @@ pub fn process<'a>(
         StartChallenge { id } => {
             process_start_challenge(program_id, accounts, id)
         }
+        AdmitChallenger { challenge_pda } => {
+            process_admit_challenger(program_id, accounts, challenge_pda)
+        }
     }
 }
 
@@ -89,6 +96,10 @@ fn process_create_challenge<'a>(
 
     let account_info_iter = &mut accounts.iter();
     let payer_info = next_account_info(account_info_iter)?;
+
+    // TODO(thlorenz): make sure that the creator is rent excempt, as otherwise
+    // he won't be able to receive funds from admitted challengers
+    // Alternatively we can make sure of that here
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
@@ -130,7 +141,7 @@ fn process_create_challenge<'a>(
         &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),
     )?;
 
-    msg!("Challenge account created and initialized ");
+    msg!("Challenge account created and initialized");
 
     Ok(())
 }
@@ -160,8 +171,14 @@ fn process_add_solutions<'a>(
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
-    let MutableChallengeFromData { mut challenge, .. } =
-        Challenge::mutable_from_data(challenge_pda_info, creator_info, &id)?;
+    let StateFromPdaAccountValue::<Challenge> {
+        state: mut challenge,
+        ..
+    } = Challenge::account_state_verifying_creator(
+        challenge_pda_info,
+        creator_info,
+        &id,
+    )?;
 
     // 1. append solutions
     assert_can_add_solutions(&challenge.solutions, &extra_solutions)?;
@@ -205,8 +222,14 @@ fn process_start_challenge(
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
 
-    let MutableChallengeFromData { mut challenge, .. } =
-        Challenge::mutable_from_data(challenge_pda_info, creator_info, &id)?;
+    let StateFromPdaAccountValue::<Challenge> {
+        state: mut challenge,
+        ..
+    } = Challenge::account_state_verifying_creator(
+        challenge_pda_info,
+        creator_info,
+        &id,
+    )?;
 
     assert_not_started(&challenge)?;
     assert_has_solutions(&challenge, "be started")?;
@@ -218,3 +241,92 @@ fn process_start_challenge(
 
     Ok(())
 }
+
+// -----------------
+// Admit Challenger
+// -----------------
+fn process_admit_challenger<'a>(
+    program_id: &'a Pubkey,
+    accounts: &'a [AccountInfo<'a>],
+    challenge_pda: Pubkey,
+) -> ProgramResult {
+    msg!("IX: admit challenger");
+
+    assert_keys_equal(program_id, &challenge_id(), || {
+        format!(
+            "Provided program id ({}) does not match this program's id ({})",
+            program_id,
+            challenge_id()
+        )
+    })?;
+
+    let account_info_iter = &mut accounts.iter();
+    let payer_info = next_account_info(account_info_iter)?;
+    let creator_info = next_account_info(account_info_iter)?;
+    let challenge_pda_info = next_account_info(account_info_iter)?;
+    let challenger_info = next_account_info(account_info_iter)?;
+    let challenger_pda_info = next_account_info(account_info_iter)?;
+
+    assert_keys_equal(challenge_pda_info.key, &challenge_pda, || {
+        format!(
+            "Provided challenge pda ({}) does not match the PDA account ({}) provided in the instruction",
+            challenge_pda, challenge_pda_info.key
+        )
+    })?;
+    assert_account_does_not_exist(challenger_pda_info, "challenger PDA")?;
+
+    let challenge: Challenge = challenge_pda_info.try_state_from_account()?;
+    assert_started(&challenge)?;
+
+    // 1. create challenger account
+    let (pda, bump) = Challenger::shank_pda(
+        &challenge_id(),
+        &challenge_pda,
+        challenger_info.key,
+    );
+
+    assert_keys_equal(challenger_pda_info.key, &pda, || {
+        format!(
+            "PDA account ({}) provided for the challenger is not a valid for this challenge",
+            challenger_pda_info.key
+        )
+    })?;
+
+    let bump_arr = [bump];
+    let seeds = Challenger::shank_seeds_with_bump(
+        &challenge_pda,
+        challenger_info.key,
+        &bump_arr,
+    );
+
+    let size = Challenger::size();
+    allocate_account_and_assign_owner(AllocateAndAssignAccountArgs {
+        payer_info,
+        account_info: challenger_pda_info,
+        owner: program_id,
+        signer_seeds: &seeds,
+        size,
+    })?;
+
+    // 2. initialize challenger account using data from the challenge
+    let challenger = Challenger {
+        authority: *challenger_info.key,
+        challenge_pda,
+        tries_remaining: challenge.tries_per_admit,
+        redeemed: false,
+    };
+
+    challenger.serialize(
+        &mut &mut challenger_pda_info.try_borrow_mut_data()?.as_mut(),
+    )?;
+
+    // 3. transfer admit cost to creator account
+    transfer_lamports(payer_info, creator_info, challenge.admit_cost)?;
+
+    Ok(())
+}
+
+// TODO(thlorenz): still missing the following instructions
+// -----------------
+// Propose Solution
+// -----------------

@@ -6,7 +6,12 @@ use solana_program::{
     system_program,
 };
 
-use crate::{challenge_id, state::Challenge, utils::hash_solutions, Solution};
+use crate::{
+    challenge_id,
+    state::{Challenge, Challenger},
+    utils::hash_solutions,
+    Solution,
+};
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub enum ChallengeInstruction {
@@ -32,6 +37,10 @@ pub enum ChallengeInstruction {
 
     StartChallenge {
         id: String,
+    },
+
+    AdmitChallenger {
+        challenge_pda: Pubkey,
     },
     // TODO(thlorenz): may need some ixs for creators that want to mutate solutions, i.e.
     //  - add solutions at index (replacing existing ones)
@@ -145,4 +154,44 @@ pub fn start_challenge(
     };
 
     Ok(ix)
+}
+
+// -----------------
+// Admit Challenger
+// -----------------
+pub struct AdmitChallengerIx {
+    pub challenge_pda: Pubkey,
+    pub challenger_pda: Pubkey,
+    pub ix: Instruction,
+}
+pub fn admit_challenger(
+    payer: Pubkey,
+    creator: Pubkey,
+    id: &str,
+    challenger: Pubkey,
+) -> Result<AdmitChallengerIx, ProgramError> {
+    let (challenge_pda, _) =
+        Challenge::shank_pda(&challenge_id(), &creator, id);
+    let (challenger_pda, _) =
+        Challenger::shank_pda(&challenge_id(), &challenge_pda, &challenger);
+
+    let ix = Instruction {
+        program_id: challenge_id(),
+        accounts: vec![
+            AccountMeta::new(payer, true),
+            AccountMeta::new(creator, false),
+            AccountMeta::new_readonly(challenge_pda, false),
+            AccountMeta::new_readonly(challenger, false),
+            AccountMeta::new(challenger_pda, false),
+            AccountMeta::new_readonly(system_program::id(), false),
+        ],
+        data: ChallengeInstruction::AdmitChallenger { challenge_pda }
+            .try_to_vec()?,
+    };
+
+    Ok(AdmitChallengerIx {
+        challenge_pda,
+        challenger_pda,
+        ix,
+    })
 }

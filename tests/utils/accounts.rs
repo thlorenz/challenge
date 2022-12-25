@@ -1,5 +1,9 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use challenge::{challenge_id, state::Challenge, utils::hash_solutions};
+use challenge::{
+    challenge_id,
+    state::{Challenge, HasPda, HasSize},
+    utils::hash_solutions,
+};
 use solana_program::{
     borsh::try_from_slice_unchecked, pubkey::Pubkey, rent::Rent,
 };
@@ -9,18 +13,25 @@ use solana_sdk::{
     signer::Signer,
 };
 
+#[allow(unused)]
+pub async fn get_account(
+    context: &mut ProgramTestContext,
+    pubkey: &Pubkey,
+) -> Account {
+    context
+        .banks_client
+        .get_account(*pubkey)
+        .await
+        .expect("get_account(): account not found")
+        .expect("get_account(): account empty")
+}
+
 #[allow(unused)] // it actually is in 01_create_challenge.rs
 pub async fn get_deserialized<T: BorshDeserialize>(
     context: &mut ProgramTestContext,
     pubkey: &Pubkey,
 ) -> (Account, T) {
-    let acc = context
-        .banks_client
-        .get_account(*pubkey)
-        .await
-        .expect("get_deserialized(): account not found")
-        .expect("get_deserialized(): account empty");
-
+    let acc = get_account(context, pubkey).await;
     let value: T =
         try_from_slice_unchecked(&acc.data).expect("Unable to deserialize");
     (acc, value)
@@ -36,30 +47,38 @@ pub async fn dump_account<T: BorshDeserialize + std::fmt::Debug>(
     eprintln!("{:#?}", acc);
 }
 
-pub fn rent_exempt_lamports(challenge: &Challenge) -> u64 {
+pub fn rent_exempt_lamports<T: HasSize>(sized_acc: &T) -> u64 {
     let rent = Rent::default();
-    rent.minimum_balance(challenge.size())
+    rent.minimum_balance(sized_acc.size())
 }
 
-#[allow(unused)] // it actually is in 02_add_solutions.rs
-pub fn add_challenge_account(
+#[allow(unused)]
+pub async fn airdrop_rent(
     context: &mut ProgramTestContext,
-    challenge: Challenge,
-) -> AccountSharedData {
-    let (address, _) = Challenge::shank_pda(
-        &challenge_id(),
-        &challenge.authority,
-        &challenge.id,
-    );
+    address: &Pubkey,
+    space: usize,
+) -> u64 {
+    let rent = Rent::default();
+    let lamports = rent.minimum_balance(space);
+    let account = AccountSharedData::new(lamports, space, address);
+    context.set_account(address, &account);
+    lamports
+}
 
-    let lamports = rent_exempt_lamports(&challenge);
-    let space = challenge.size();
+#[allow(unused)]
+pub fn add_pda_account<T: HasSize + HasPda + BorshSerialize>(
+    context: &mut ProgramTestContext,
+    value: &T,
+) -> Account {
+    let (address, _) = value.pda();
+    let lamports = rent_exempt_lamports(value);
+    let space = value.size();
 
     let mut account = AccountSharedData::new(lamports, space, &challenge_id());
-    account.set_data(challenge.try_to_vec().unwrap());
+    account.set_data(value.try_to_vec().unwrap());
     context.set_account(&address, &account);
 
-    account
+    account.into()
 }
 
 #[allow(unused)] // it actually is in 02_add_solutions.rs
@@ -68,11 +87,11 @@ pub fn add_challenge_with_solutions(
     id: &str,
     solutions: Vec<&str>,
     authority: Option<Pubkey>,
-) -> AccountSharedData {
+) -> Account {
     let solutions = hash_solutions(&solutions);
-    add_challenge_account(
+    add_pda_account(
         context,
-        Challenge {
+        &Challenge {
             authority: authority.unwrap_or_else(|| context.payer.pubkey()),
             id: id.to_string(),
             started: false,
@@ -91,11 +110,11 @@ pub fn add_started_challenge_with_solutions(
     id: &str,
     solutions: Vec<&str>,
     authority: Option<Pubkey>,
-) -> AccountSharedData {
+) -> Account {
     let solutions = hash_solutions(&solutions);
-    add_challenge_account(
+    add_pda_account(
         context,
-        Challenge {
+        &Challenge {
             authority: authority.unwrap_or_else(|| context.payer.pubkey()),
             id: id.to_string(),
             started: true,

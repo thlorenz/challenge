@@ -1,18 +1,18 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use shank::ShankAccount;
 use solana_program::{
-    account_info::AccountInfo, borsh::try_from_slice_unchecked,
-    hash::HASH_BYTES, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
-    sysvar::Sysvar,
+    account_info::AccountInfo, hash::HASH_BYTES, program_error::ProgramError,
+    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
 };
 
 use crate::{
     challenge_id,
-    utils::{
-        assert_account_is_funded_and_has_data, assert_is_signer,
-        assert_keys_equal,
-    },
+    utils::{assert_is_signer, assert_keys_equal},
     Solution,
+};
+
+use super::{
+    HasPda, HasSize, StateFromPdaAccountValue, TryStateFromPdaAccount,
 };
 
 #[derive(ShankAccount, BorshSerialize, BorshDeserialize)]
@@ -59,6 +59,8 @@ pub struct Challenge {
     /// All solutions of the challenge, solving each will result in the redeem
     /// to be sent to the challenger.
     pub solutions: Vec<Solution>,
+    // TODO(thlorenz): add challengers admitted
+    // TODO(thlorenz): add challengers redeemed
 }
 
 impl std::fmt::Debug for Challenge {
@@ -79,16 +81,24 @@ impl std::fmt::Debug for Challenge {
 pub const EMPTY_CHALLENGE_SIZE_WITH_EMPTY_ID: usize =
     /* authority */      32 + 
     /* id */              4 + /* does not include string len */
-    /* ready */           1 +
+    /* started */         1 +
     /* admit_cost */      8 +
     /* tries_per_admit */ 1 +
     /* redeem */         32 +
     /* solving */         1 +
     /* solutions */       4; // u32 for Vec::len
 
-pub struct MutableChallengeFromData {
-    pub challenge: Challenge,
-    pub pda: Pubkey,
+impl HasSize for Challenge {
+    /// Returns the size assuming no more solutions will be added.
+    fn size(&self) -> usize {
+        Challenge::needed_size(&self.solutions, &self.id)
+    }
+}
+
+impl HasPda for Challenge {
+    fn pda(&self) -> (Pubkey, u8) {
+        Challenge::shank_pda(&challenge_id(), &self.authority, &self.id)
+    }
 }
 
 impl Challenge {
@@ -100,11 +110,6 @@ impl Challenge {
 
     pub fn space_to_store_n_solutions(solutions_len: u8) -> usize {
         solutions_len as usize * HASH_BYTES
-    }
-
-    /// Returns the size assuming no more solutions will be added.
-    pub fn size(&self) -> usize {
-        Challenge::needed_size(&self.solutions, &self.id)
     }
 
     /// Only use on-chain as Rent::get is not available otherwise.
@@ -119,34 +124,24 @@ impl Challenge {
     /// - the challenge account is funded and initialized (has data)
     /// - the creator (authority) is signer
     /// - the creator is the authority for the challenge
-    pub fn mutable_from_data(
+    pub fn account_state_verifying_creator(
         challenge_pda_info: &AccountInfo,
         creator_info: &AccountInfo,
         id: &str,
-    ) -> Result<MutableChallengeFromData, ProgramError> {
-        let (pda, _) =
-            Challenge::shank_pda(&challenge_id(), creator_info.key, id);
-
-        assert_keys_equal(challenge_pda_info.key, &pda, || {
-            format!(
-            "PDA for the challenge for creator ({}) and id ({}) is incorrect",
-            creator_info.key, id
-        )
-        })?;
-        assert_account_is_funded_and_has_data(challenge_pda_info)?;
-
-        let challenge = {
-            let challenge_data = &challenge_pda_info.try_borrow_data()?;
-            try_from_slice_unchecked::<Challenge>(challenge_data)?
-        };
+    ) -> Result<StateFromPdaAccountValue<Challenge>, ProgramError> {
+        let StateFromPdaAccountValue::<Challenge> { state, pda, bump } =
+            challenge_pda_info.try_state_from_pda_account(|| {
+                Challenge::shank_pda(&challenge_id(), creator_info.key, id)
+            })?;
 
         assert_is_signer(creator_info, "creator")?;
-        assert_keys_equal(&challenge.authority, creator_info.key, || {
+
+        assert_keys_equal(&state.authority, creator_info.key, || {
             format!(
             "Challenge's authority ({}) does not match provided creator ({})",
-            challenge.authority, creator_info.key
+            state.authority, creator_info.key
         )
         })?;
-        Ok(MutableChallengeFromData { challenge, pda })
+        Ok(StateFromPdaAccountValue::<Challenge> { state, pda, bump })
     }
 }

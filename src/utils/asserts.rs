@@ -105,15 +105,6 @@ pub fn assert_is_signer(
     }
 }
 
-pub fn assert_not_started(challenge: &Challenge) -> ProgramResult {
-    if challenge.started {
-        msg!("Err: challenge '{}' has already started", challenge.id);
-        Err(ChallengeError::ChallengeAlreadyStarted.into())
-    } else {
-        Ok(())
-    }
-}
-
 pub fn assert_has_solutions(
     challenge: &Challenge,
     task: &str,
@@ -125,6 +116,43 @@ pub fn assert_has_solutions(
             task
         );
         Err(ChallengeError::ChallengeHasNoSolutions.into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn assert_not_started(challenge: &Challenge) -> ProgramResult {
+    if challenge.started {
+        msg!("Err: challenge '{}' has already started", challenge.id);
+        Err(ChallengeError::ChallengeAlreadyStarted.into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn assert_started(challenge: &Challenge) -> ProgramResult {
+    if !challenge.started {
+        msg!("Err: challenge '{}' has not yet started and is not admitting challengers", challenge.id);
+        Err(ChallengeError::ChallengeNotYetStarted.into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn assert_account_does_not_exist(
+    account: &AccountInfo,
+    acc_name: &str,
+) -> ProgramResult {
+    if account.owner.ne(&Pubkey::default())
+        || account.try_lamports()?.ne(&0)
+        || account.try_data_len()?.ne(&0)
+    {
+        msg!(
+            "Err: account '{}' ({}) exists already",
+            acc_name,
+            account.key,
+        );
+        Err(ChallengeError::AccountAlreadyExists.into())
     } else {
         Ok(())
     }
