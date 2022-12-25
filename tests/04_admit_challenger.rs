@@ -69,6 +69,7 @@ async fn admit_challenger_to_started_challenge() {
         .await
         .expect("Failed to admit challenger");
 
+    // Verify that the challenger account was created correctly
     let (acc, value) =
         get_deserialized::<Challenger>(&mut context, &challenger_pda).await;
 
@@ -87,6 +88,7 @@ async fn admit_challenger_to_started_challenge() {
         }
     );
 
+    // Verify that creator was paid the admit fee
     let creator_acc = get_account(&mut context, &creator).await;
     assert_eq!(
         creator_acc.lamports,
@@ -136,12 +138,9 @@ async fn admit_challenger_trying_twice_for_same_challenge() {
         },
     );
 
-    let AdmitChallengerIx {
-        ix,
-        challenge_pda: _,
-        challenger_pda: _,
-    } = ixs::admit_challenger(payer, creator, ID, challenger)
-        .expect("failed to create instruction");
+    let AdmitChallengerIx { ix, .. } =
+        ixs::admit_challenger(payer, creator, ID, challenger)
+            .expect("failed to create instruction");
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -156,3 +155,51 @@ async fn admit_challenger_trying_twice_for_same_challenge() {
         .await
         .expect("Failed to admit challenger");
 }
+
+#[tokio::test]
+#[should_panic]
+async fn admit_challenger_to_not_yet_started_challenge() {
+    let mut context = program_test().start_with_context().await;
+
+    let creator = Pubkey::new_unique();
+    airdrop_rent(&mut context, &creator, 0).await;
+
+    let payer = context.payer.pubkey();
+    let challenger = Pubkey::new_unique();
+
+    let solutions = hash_solutions(&["hello", "world"]);
+
+    let challenge = &Challenge {
+        authority: creator,
+        id: ID.to_string(),
+        started: false,
+        admit_cost: ADMIT_COST,
+        tries_per_admit: TRIES_PER_ADMIT,
+        redeem: Pubkey::new_unique(),
+        solving: 0,
+        solutions,
+    };
+
+    add_pda_account(&mut context, challenge);
+
+    let AdmitChallengerIx { ix, .. } =
+        ixs::admit_challenger(payer, creator, ID, challenger)
+            .expect("failed to create instruction");
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    context
+        .banks_client
+        .process_transaction(tx)
+        .await
+        .expect("Failed to admit challenger");
+}
+
+// TODO(thlorenz): there are lots of other invalid cases we should ensure are handled properly
+// TODO(thlorenz): Additionally we should put in the extra work to convert the `should_panic` tests
+// to perform more specific asserts on the error returned.

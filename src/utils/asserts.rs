@@ -105,15 +105,6 @@ pub fn assert_is_signer(
     }
 }
 
-pub fn assert_not_started(challenge: &Challenge) -> ProgramResult {
-    if challenge.started {
-        msg!("Err: challenge '{}' has already started", challenge.id);
-        Err(ChallengeError::ChallengeAlreadyStarted.into())
-    } else {
-        Ok(())
-    }
-}
-
 pub fn assert_has_solutions(
     challenge: &Challenge,
     task: &str,
@@ -130,8 +121,17 @@ pub fn assert_has_solutions(
     }
 }
 
-pub fn assert_started(challenge: &Challenge) -> ProgramResult {
+pub fn assert_not_started(challenge: &Challenge) -> ProgramResult {
     if challenge.started {
+        msg!("Err: challenge '{}' has already started", challenge.id);
+        Err(ChallengeError::ChallengeAlreadyStarted.into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn assert_started(challenge: &Challenge) -> ProgramResult {
+    if !challenge.started {
         msg!("Err: challenge '{}' has not yet started and is not admitting challengers", challenge.id);
         Err(ChallengeError::ChallengeNotYetStarted.into())
     } else {

@@ -17,8 +17,9 @@ use crate::{
         allocate_account_and_assign_owner, assert_account_does_not_exist,
         assert_account_has_no_data, assert_adding_non_empty,
         assert_can_add_solutions, assert_has_solutions, assert_keys_equal,
-        assert_max_supported_solutions, assert_not_started, reallocate_account,
-        transfer_lamports, AllocateAndAssignAccountArgs, ReallocateAccountArgs,
+        assert_max_supported_solutions, assert_not_started, assert_started,
+        reallocate_account, transfer_lamports, AllocateAndAssignAccountArgs,
+        ReallocateAccountArgs,
     },
     Solution,
 };
@@ -274,6 +275,9 @@ fn process_admit_challenger<'a>(
     })?;
     assert_account_does_not_exist(challenger_pda_info, "challenger PDA")?;
 
+    let challenge: Challenge = challenge_pda_info.try_state_from_account()?;
+    assert_started(&challenge)?;
+
     // 1. create challenger account
     let (pda, bump) = Challenger::shank_pda(
         &challenge_id(),
@@ -305,8 +309,6 @@ fn process_admit_challenger<'a>(
     })?;
 
     // 2. initialize challenger account using data from the challenge
-    let challenge: Challenge = challenge_pda_info.try_state_from_account()?;
-
     let challenger = Challenger {
         authority: *challenger_info.key,
         challenge_pda,
@@ -321,18 +323,10 @@ fn process_admit_challenger<'a>(
     // 3. transfer admit cost to creator account
     transfer_lamports(payer_info, creator_info, challenge.admit_cost)?;
 
-    // TODO(thlorenz): increase challenger count in challenge once (if) we track it
-
-    msg!("Challenger admitted");
-
     Ok(())
 }
 
 // TODO(thlorenz): still missing the following instructions
 // -----------------
 // Propose Solution
-// -----------------
-
-// -----------------
-// Cashout to Creator
 // -----------------
