@@ -1,8 +1,12 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use shank::ShankAccount;
 use solana_program::{
-    account_info::AccountInfo, hash::HASH_BYTES, program_error::ProgramError,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo,
+    hash::{hash, HASH_BYTES},
+    program_error::ProgramError,
+    pubkey::Pubkey,
+    rent::Rent,
+    sysvar::Sysvar,
 };
 
 use crate::{
@@ -148,5 +152,21 @@ impl Challenge {
         )
         })?;
         Ok(StateFromPdaAccountValue::<Challenge> { state, pda, bump })
+    }
+
+    pub fn current_solution(&self) -> Option<&Solution> {
+        self.solutions.get(self.solving as usize)
+    }
+
+    pub fn is_solution_correct(&self, sent_solution: &Solution) -> bool {
+        let solution_stored_as = hash(sent_solution).to_bytes();
+        let correct_solution = self.current_solution();
+
+        // We should always get a solution here since we assert first that we have one
+        if let Some(correct_solution) = correct_solution {
+            solution_stored_as.ne(correct_solution)
+        } else {
+            false
+        }
     }
 }

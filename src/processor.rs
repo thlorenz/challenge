@@ -16,7 +16,8 @@ use crate::{
     utils::{
         allocate_account_and_assign_owner, assert_account_does_not_exist,
         assert_account_has_no_data, assert_adding_non_empty,
-        assert_can_add_solutions, assert_has_solutions, assert_is_signer,
+        assert_can_add_solutions, assert_challenger_has_tries_remaining,
+        assert_has_solution, assert_has_solutions, assert_is_signer,
         assert_keys_equal, assert_max_supported_solutions, assert_not_finished,
         assert_not_started, assert_started, reallocate_account,
         transfer_lamports, AllocateAndAssignAccountArgs, ReallocateAccountArgs,
@@ -62,6 +63,7 @@ pub fn process<'a>(
         AdmitChallenger { challenge_pda } => {
             process_admit_challenger(program_id, accounts, challenge_pda)
         }
+        Redeem { solution } => process_redeem(program_id, accounts, solution),
     }
 }
 
@@ -198,6 +200,8 @@ fn process_add_solutions<'a>(
         &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),
     )?;
 
+    // TODO(thlorenz): @@@ update finished if we now can solve solutios again
+
     Ok(())
 }
 
@@ -328,7 +332,67 @@ fn process_admit_challenger<'a>(
     Ok(())
 }
 
-// TODO(thlorenz): still missing the following instructions
 // -----------------
-// Propose Solution
+// Redeem by proposing solution
 // -----------------
+fn process_redeem<'a>(
+    program_id: &'a Pubkey,
+    accounts: &'a [AccountInfo<'a>],
+    solution: Solution,
+) -> ProgramResult {
+    msg!("IX: redeem");
+
+    assert_keys_equal(program_id, &challenge_id(), || {
+        format!(
+            "Provided program id ({}) does not match this program's id ({})",
+            program_id,
+            challenge_id()
+        )
+    })?;
+
+    let account_info_iter = &mut accounts.iter();
+    let payer_info = next_account_info(account_info_iter)?;
+    let challenge_pda_info = next_account_info(account_info_iter)?;
+    let challenger_info = next_account_info(account_info_iter)?;
+    let challenger_pda_info = next_account_info(account_info_iter)?;
+
+    assert_is_signer(payer_info, "payer")?;
+    assert_is_signer(challenger_info, "challenger")?;
+
+    let mut challenger: Challenger =
+        challenger_pda_info.try_state_from_account()?;
+
+    assert_keys_equal(
+        &challenger.challenge_pda,
+        challenge_pda_info.key,
+        || {
+            format!(
+            "Challenge pda ({}) of provided callenger does not match the PDA account ({}) for which you are trying to redeem",
+            &challenger.challenge_pda, challenge_pda_info.key
+        )
+        },
+    )?;
+
+    let challenge: Challenge = challenge_pda_info.try_state_from_account()?;
+    // TODO(thlorenz): Technically the challenger would not have been admitted if the challenge
+    // wasn't already started, so might not need this check
+    assert_started(&challenge)?;
+    assert_not_finished(&challenge)?;
+
+    assert_challenger_has_tries_remaining(&challenger)?;
+    assert_has_solution(&challenge)?;
+
+    if challenge.is_solution_correct(&solution) {
+        // TODO(thlorenz): @@@ increment solving
+        // TODO(thlorenz): @@@ update finished if out of solutions
+        // TODO(thlorenz): mint_token_to_player but first need to init the token when challenge is
+        msg!("TODO: mint token ({})", challenge.redeem);
+    } else {
+        challenger.tries_remaining -= 1;
+        msg!("Provides solution was incorrect");
+    }
+
+    // created
+
+    Ok(())
+}
