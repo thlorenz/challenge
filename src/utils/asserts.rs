@@ -139,6 +139,15 @@ pub fn assert_started(challenge: &Challenge) -> ProgramResult {
     }
 }
 
+pub fn assert_not_finished(challenge: &Challenge) -> ProgramResult {
+    if challenge.finished {
+        msg!("Err: challenge '{}' has already finished", challenge.id);
+        Err(ChallengeError::ChallengeAlreadyFinished.into())
+    } else {
+        Ok(())
+    }
+}
+
 pub fn assert_account_does_not_exist(
     account: &AccountInfo,
     acc_name: &str,

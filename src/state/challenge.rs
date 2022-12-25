@@ -42,6 +42,10 @@ pub struct Challenge {
     /// If not it won't admit nor redeem to anyone.
     pub started: bool,
 
+    /// Indicates if the challenge has finished.
+    /// At this point no challengers can be admitted nor can any one redeem the price.
+    pub finished: bool,
+
     /// The fee that will be transferred to the creator from the challenger account
     /// when the admit instruction is processed.
     pub admit_cost: u64,
@@ -59,8 +63,6 @@ pub struct Challenge {
     /// All solutions of the challenge, solving each will result in the redeem
     /// to be sent to the challenger.
     pub solutions: Vec<Solution>,
-    // TODO(thlorenz): add challengers admitted
-    // TODO(thlorenz): add challengers redeemed
 }
 
 impl std::fmt::Debug for Challenge {
@@ -68,6 +70,8 @@ impl std::fmt::Debug for Challenge {
         f.debug_struct("Challenge")
             .field("authority", &self.authority)
             .field("id", &self.id)
+            .field("started", &self.started)
+            .field("finished", &self.finished)
             .field("admit_cost", &self.admit_cost)
             .field("tries_per_admit", &self.tries_per_admit)
             .field("redeem", &self.redeem)
@@ -82,6 +86,7 @@ pub const EMPTY_CHALLENGE_SIZE_WITH_EMPTY_ID: usize =
     /* authority */      32 + 
     /* id */              4 + /* does not include string len */
     /* started */         1 +
+    /* finished */        1 +
     /* admit_cost */      8 +
     /* tries_per_admit */ 1 +
     /* redeem */         32 +

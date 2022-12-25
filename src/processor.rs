@@ -16,10 +16,10 @@ use crate::{
     utils::{
         allocate_account_and_assign_owner, assert_account_does_not_exist,
         assert_account_has_no_data, assert_adding_non_empty,
-        assert_can_add_solutions, assert_has_solutions, assert_keys_equal,
-        assert_max_supported_solutions, assert_not_started, assert_started,
-        reallocate_account, transfer_lamports, AllocateAndAssignAccountArgs,
-        ReallocateAccountArgs,
+        assert_can_add_solutions, assert_has_solutions, assert_is_signer,
+        assert_keys_equal, assert_max_supported_solutions, assert_not_finished,
+        assert_not_started, assert_started, reallocate_account,
+        transfer_lamports, AllocateAndAssignAccountArgs, ReallocateAccountArgs,
     },
     Solution,
 };
@@ -130,6 +130,7 @@ fn process_create_challenge<'a>(
         authority: *creator_info.key,
         id,
         started: false,
+        finished: false,
         admit_cost,
         tries_per_admit,
         redeem,
@@ -277,6 +278,7 @@ fn process_admit_challenger<'a>(
 
     let challenge: Challenge = challenge_pda_info.try_state_from_account()?;
     assert_started(&challenge)?;
+    assert_not_finished(&challenge)?;
 
     // 1. create challenger account
     let (pda, bump) = Challenger::shank_pda(

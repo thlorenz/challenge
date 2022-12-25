@@ -57,6 +57,10 @@ pub enum ChallengeError {
         "Challenge has not started yet and is not ready to admit challengers"
     )]
     ChallengeNotYetStarted,
+
+    #[error("Challenge was finished already and is not admitting challengers nor allowing to redeem prices")]
+    ChallengeAlreadyFinished,
+
     // -----------------
     // Misc
     // -----------------

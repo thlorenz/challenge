@@ -57,6 +57,7 @@ async fn create_challenge_without_solutions() {
             authority,
             id,
             started: false,
+            finished: false,
             admit_cost: 1000,
             tries_per_admit: 1,
             redeem: r,
@@ -114,6 +115,7 @@ async fn create_challenge_with_two_solutions() {
             authority,
             id,
             started: false,
+            finished: false,
             admit_cost: 1000,
             tries_per_admit: 1,
             redeem: r,
@@ -207,6 +209,7 @@ async fn create_two_challenges_same_creator_different_id() {
                 authority,
                 id,
                 started: false,
+                finished: false,
                 admit_cost: 1000,
                 tries_per_admit: 1,
                 redeem: r,
@@ -237,6 +240,7 @@ async fn create_two_challenges_same_creator_different_id() {
                 authority,
                 id,
                 started: false,
+                finished: false,
                 admit_cost: 2000,
                 tries_per_admit: 2,
                 redeem: r,
@@ -328,7 +332,7 @@ async fn create_two_challenges_same_creator_same_id() {
             .expect("Failed create challenge");
     }
 
-    // Try to reate second Challenge (this fails)
+    // Try to create second Challenge (this fails)
     {
         let ix = ixs::create_challenge(
             creator,
