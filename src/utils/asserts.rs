@@ -1,6 +1,5 @@
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, hash::hash, msg,
-    pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, pubkey::Pubkey,
 };
 
 use crate::{
@@ -174,10 +173,9 @@ pub fn assert_account_does_not_exist(
 
 pub fn assert_has_solution(challenge: &Challenge) -> ProgramResult {
     if challenge.current_solution().is_none() {
-        msg!(
-                "Err: challenge '{}' is out of solutions, not sure how that happened",
-                challenge.id
-            );
+        msg!("Err: challenge '{}' is out of solutions, not sure how that happened",
+            challenge.id);
+
         Err(ChallengeError::SolutionIsIncorrect.into())
     } else {
         Ok(())

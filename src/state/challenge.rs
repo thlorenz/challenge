@@ -59,6 +59,10 @@ pub struct Challenge {
 
     // TODO(thlorenz): make sure this works for NFTS or create an NFTChallenge
     // which is the same thing except that redeem integrates with TokenMetadata program
+    //
+    /// The address of the price token.
+    /// Should this be an array/collection for case b) of the reason to have multiple solutions?
+    /// See below ([Challenge::solutions])
     pub redeem: Pubkey,
 
     /// The index of the solution that needs to be found next
@@ -66,6 +70,12 @@ pub struct Challenge {
 
     /// All solutions of the challenge, solving each will result in the redeem
     /// to be sent to the challenger.
+    /// There are two reasons why multiple solutions exist:
+    /// - a) to include a nonce for each and thus prevent challenger 2 just repeating the hashed
+    ///   solution that challenger 1 provided
+    /// - b) there is a series of puzzles that can be solved in order to solve the challenge, and
+    ///   challengers may be allowed to redeem multiple times and receive the `redeem` token more
+    ///   than once
     pub solutions: Vec<Solution>,
 }
 
@@ -164,7 +174,7 @@ impl Challenge {
 
         // We should always get a solution here since we assert first that we have one
         if let Some(correct_solution) = correct_solution {
-            solution_stored_as.ne(correct_solution)
+            solution_stored_as.eq(correct_solution)
         } else {
             false
         }

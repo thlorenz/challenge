@@ -13,9 +13,18 @@ use super::{HasPda, HasSize};
     challenger("The address attempting to solve the challenge")
 )]
 pub struct Challenger {
+    /// The authority that can redeem the challenge, which is the account from
+    /// which the challenger PDA (the owner of this account) was derived.
     pub authority: Pubkey,
+
+    /// The PDA of the challenge that the challenger is solving.
     pub challenge_pda: Pubkey,
+
+    /// How many more attempts the callenger has to provide a solution to redeem.
     pub tries_remaining: u8,
+
+    /// This means that the challenger redeemed at least once.
+    /// Shoud this be a count even though we could just mint multiple `redeem` tokens?
     pub redeemed: bool,
 }
 
@@ -47,51 +56,3 @@ impl Challenger {
         CHALLENGER_SIZE
     }
 }
-
-/* // TODO(thlorenz): @@@ Traits first
-impl Challenger {
-    /// Deserializes a challenger from the given account data and verifies the following:
-    /// - the provided challenger pda account is for the provided challenger and challenge PDA
-    /// - the challenge account is funded and initialized (has data)
-    /// - the challenger (authority) is signer
-    /// - the challenger is the authority for the challenge
-    pub fn mutable_from_data_verifying_challenger(
-        challenge_pda_info: &AccountInfo,
-        challenger_pda_info: &AccountInfo,
-    ) -> Result<PdaAccountInfo<Challenger>, ProgramError> {
-        let PdaAccountInfo<Challenger> { challenge, pda } =
-            PdaAccountInfo::<Challenger>::mutable_from_data(challenger_pda_info)?;
-
-        assert_keys_equal(challenger_pda_info.key, &pda, || {
-            format!(
-            "PDA for the challenge for creator ({}) and id ({}) is incorrect",
-            creator_info.key, id
-        )
-        })?;
-        assert_account_is_funded_and_has_data(challenger_pda_info)?;
-
-        let challenge = {
-            let challenge_data = &challenger_pda_info.try_borrow_data()?;
-            try_from_slice_unchecked::<Challenge>(challenge_data)?
-        };
-
-        assert_is_signer(creator_info, "creator")?;
-
-        assert_keys_equal(&challenge.authority, creator_info.key, || {
-            format!(
-            "Challenge's authority ({}) does not match provided creator ({})",
-            challenge.authority, creator_info.key
-        )
-        })?;
-        Ok(MutableChallengeFromData { challenge, pda })
-    }
-}
-*/
-
-/*
-    creator("The authority managing the challenge. Matches Challenge PDA's creator."),
-    challenge_id(
-        "Unique id of the challenge. Matches Challenge PDA's id.",
-        str
-    ),
-*/

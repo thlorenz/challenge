@@ -200,7 +200,7 @@ fn process_add_solutions<'a>(
         &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),
     )?;
 
-    // TODO(thlorenz): @@@ update finished if we now can solve solutios again
+    // TODO(thlorenz): unfinish, if we now can redeem b providing solutions again
 
     Ok(())
 }
@@ -373,7 +373,9 @@ fn process_redeem<'a>(
         },
     )?;
 
-    let challenge: Challenge = challenge_pda_info.try_state_from_account()?;
+    let mut challenge: Challenge =
+        challenge_pda_info.try_state_from_account()?;
+
     // TODO(thlorenz): Technically the challenger would not have been admitted if the challenge
     // wasn't already started, so might not need this check
     assert_started(&challenge)?;
@@ -383,16 +385,30 @@ fn process_redeem<'a>(
     assert_has_solution(&challenge)?;
 
     if challenge.is_solution_correct(&solution) {
-        // TODO(thlorenz): @@@ increment solving
-        // TODO(thlorenz): @@@ update finished if out of solutions
+        // update challenge
+        challenge.solving += 1;
+        challenge.finished = challenge.current_solution().is_none();
+        if challenge.finished {
+            msg!("Challenge finished, no more player will be admitted or solutions accepted");
+        }
+        challenge.serialize(
+            &mut &mut challenge_pda_info.try_borrow_mut_data()?.as_mut(),
+        )?;
+
+        // update challenger
+        challenger.redeemed = true;
+
         // TODO(thlorenz): mint_token_to_player but first need to init the token when challenge is
         msg!("TODO: mint token ({})", challenge.redeem);
     } else {
-        challenger.tries_remaining -= 1;
-        msg!("Provides solution was incorrect");
+        msg!("Provided solution was incorrect");
     }
 
-    // created
+    // in all cases update challenger remaining tries and serialize
+    challenger.tries_remaining -= 1;
+    challenger.serialize(
+        &mut &mut challenger_pda_info.try_borrow_mut_data()?.as_mut(),
+    )?;
 
     Ok(())
 }
