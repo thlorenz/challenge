@@ -2,7 +2,11 @@ use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, msg, pubkey::Pubkey,
 };
 
-use crate::{error::ChallengeError, state::Challenge, Solution};
+use crate::{
+    error::ChallengeError,
+    state::{Challenge, Challenger},
+    Solution,
+};
 
 pub fn assert_keys_equal<F: FnOnce() -> String>(
     provided_key: &Pubkey,
@@ -139,6 +143,15 @@ pub fn assert_started(challenge: &Challenge) -> ProgramResult {
     }
 }
 
+pub fn assert_not_finished(challenge: &Challenge) -> ProgramResult {
+    if challenge.finished {
+        msg!("Err: challenge '{}' has already finished and is not admitting challengers nor accepting solutions", challenge.id);
+        Err(ChallengeError::ChallengeAlreadyFinished.into())
+    } else {
+        Ok(())
+    }
+}
+
 pub fn assert_account_does_not_exist(
     account: &AccountInfo,
     acc_name: &str,
@@ -153,6 +166,28 @@ pub fn assert_account_does_not_exist(
             account.key,
         );
         Err(ChallengeError::AccountAlreadyExists.into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn assert_has_solution(challenge: &Challenge) -> ProgramResult {
+    if challenge.current_solution().is_none() {
+        msg!("Err: challenge '{}' is out of solutions, not sure how that happened",
+            challenge.id);
+
+        Err(ChallengeError::SolutionIsIncorrect.into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn assert_challenger_has_tries_remaining(
+    challenger: &Challenger,
+) -> ProgramResult {
+    if challenger.tries_remaining.eq(&0) {
+        msg!("Err: challenger has no tries left");
+        Err(ChallengeError::ChallengerHasNoTriesRemaining.into())
     } else {
         Ok(())
     }

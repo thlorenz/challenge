@@ -57,6 +57,26 @@ pub enum ChallengeError {
         "Challenge has not started yet and is not ready to admit challengers"
     )]
     ChallengeNotYetStarted,
+
+    #[error("Challenge was finished already and is not admitting challengers nor allowing to redeem prices")]
+    ChallengeAlreadyFinished,
+
+    // -----------------
+    // Redeem
+    // -----------------
+    #[error(
+        "The provided solution did not match the currently expected solution"
+    )]
+    SolutionIsIncorrect,
+
+    // We should never encounter this since the challenge would be auto-finished
+    // after last solution was provided
+    #[error("All solutions were already redeemed")]
+    OutOfSolutions,
+
+    #[error("This challenger used up all tries to solve the challenge")]
+    ChallengerHasNoTriesRemaining,
+
     // -----------------
     // Misc
     // -----------------

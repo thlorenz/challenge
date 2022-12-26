@@ -63,6 +63,7 @@ async fn start_challenge_that_is_not_started_and_has_solutions() {
             authority,
             id,
             started: true,
+            finished: false,
             admit_cost: 200,
             tries_per_admit: 1,
             redeem: _,

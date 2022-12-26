@@ -9,7 +9,7 @@ use solana_program::{
 use crate::{
     challenge_id,
     state::{Challenge, Challenger},
-    utils::hash_solutions,
+    utils::{hash_solution_challenger_sends, hash_solutions},
     Solution,
 };
 
@@ -41,6 +41,10 @@ pub enum ChallengeInstruction {
 
     AdmitChallenger {
         challenge_pda: Pubkey,
+    },
+
+    Redeem {
+        solution: Solution,
     },
     // TODO(thlorenz): may need some ixs for creators that want to mutate solutions, i.e.
     //  - add solutions at index (replacing existing ones)
@@ -106,7 +110,7 @@ pub fn create_challenge(
 /// * [creator]: the authority managing the challenge
 /// * [id]: unique id used when creating the challenge
 /// * [solutions]: solutions to be added in clear text, they are encoded via
-///   `sha256(sha256(solution))` before being passed on to the program
+///   `sha256(sha256(solution))` before being stored
 /// * [index]: the index at which to insert the solutions
 ///   if provided solutions starting at that index are replaced, otherwise they are appended
 pub fn add_solutions(
@@ -194,4 +198,47 @@ pub fn admit_challenger(
         challenger_pda,
         ix,
     })
+}
+
+// -----------------
+// Redeem by providing solution
+// -----------------
+/// Attempts to redeem by providing a solution.
+///
+/// * [payer]: pays for the transaction and is usually the challenger
+/// * [creator]: the authority managing the challenge
+/// * [id]: unique id used when creating the challenge
+/// * [challenger]: the  account attempting to redeem by providing the solution
+/// * [solution]: solutions to be added in clear text, they are encoded via `sha256(solution)`
+///   before being passed to the challenge
+pub fn redeem(
+    payer: Pubkey,
+    creator: Pubkey,
+    id: &str,
+    challenger: Pubkey,
+    solution: &str,
+) -> Result<Instruction, ProgramError> {
+    let challenger_sends = hash_solution_challenger_sends(solution);
+
+    let (challenge_pda, _) =
+        Challenge::shank_pda(&challenge_id(), &creator, id);
+    let (challenger_pda, _) =
+        Challenger::shank_pda(&challenge_id(), &challenge_pda, &challenger);
+
+    let ix = Instruction {
+        program_id: challenge_id(),
+        accounts: vec![
+            AccountMeta::new(payer, true),
+            AccountMeta::new(challenge_pda, false),
+            AccountMeta::new_readonly(challenger, true),
+            AccountMeta::new(challenger_pda, false),
+            AccountMeta::new_readonly(system_program::id(), false),
+        ],
+        data: ChallengeInstruction::Redeem {
+            solution: challenger_sends,
+        }
+        .try_to_vec()?,
+    };
+
+    Ok(ix)
 }

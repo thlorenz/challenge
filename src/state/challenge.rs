@@ -1,8 +1,12 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use shank::ShankAccount;
 use solana_program::{
-    account_info::AccountInfo, hash::HASH_BYTES, program_error::ProgramError,
-    pubkey::Pubkey, rent::Rent, sysvar::Sysvar,
+    account_info::AccountInfo,
+    hash::{hash, HASH_BYTES},
+    program_error::ProgramError,
+    pubkey::Pubkey,
+    rent::Rent,
+    sysvar::Sysvar,
 };
 
 use crate::{
@@ -42,6 +46,10 @@ pub struct Challenge {
     /// If not it won't admit nor redeem to anyone.
     pub started: bool,
 
+    /// Indicates if the challenge has finished.
+    /// At this point no challengers can be admitted nor can any one redeem the price.
+    pub finished: bool,
+
     /// The fee that will be transferred to the creator from the challenger account
     /// when the admit instruction is processed.
     pub admit_cost: u64,
@@ -51,6 +59,10 @@ pub struct Challenge {
 
     // TODO(thlorenz): make sure this works for NFTS or create an NFTChallenge
     // which is the same thing except that redeem integrates with TokenMetadata program
+    //
+    /// The address of the price token.
+    /// Should this be an array/collection for case b) of the reason to have multiple solutions?
+    /// See below ([Challenge::solutions])
     pub redeem: Pubkey,
 
     /// The index of the solution that needs to be found next
@@ -58,9 +70,13 @@ pub struct Challenge {
 
     /// All solutions of the challenge, solving each will result in the redeem
     /// to be sent to the challenger.
+    /// There are two reasons why multiple solutions exist:
+    /// - a) to include a nonce for each and thus prevent challenger 2 just repeating the hashed
+    ///   solution that challenger 1 provided
+    /// - b) there is a series of puzzles that can be solved in order to solve the challenge, and
+    ///   challengers may be allowed to redeem multiple times and receive the `redeem` token more
+    ///   than once
     pub solutions: Vec<Solution>,
-    // TODO(thlorenz): add challengers admitted
-    // TODO(thlorenz): add challengers redeemed
 }
 
 impl std::fmt::Debug for Challenge {
@@ -68,6 +84,8 @@ impl std::fmt::Debug for Challenge {
         f.debug_struct("Challenge")
             .field("authority", &self.authority)
             .field("id", &self.id)
+            .field("started", &self.started)
+            .field("finished", &self.finished)
             .field("admit_cost", &self.admit_cost)
             .field("tries_per_admit", &self.tries_per_admit)
             .field("redeem", &self.redeem)
@@ -82,6 +100,7 @@ pub const EMPTY_CHALLENGE_SIZE_WITH_EMPTY_ID: usize =
     /* authority */      32 + 
     /* id */              4 + /* does not include string len */
     /* started */         1 +
+    /* finished */        1 +
     /* admit_cost */      8 +
     /* tries_per_admit */ 1 +
     /* redeem */         32 +
@@ -143,5 +162,21 @@ impl Challenge {
         )
         })?;
         Ok(StateFromPdaAccountValue::<Challenge> { state, pda, bump })
+    }
+
+    pub fn current_solution(&self) -> Option<&Solution> {
+        self.solutions.get(self.solving as usize)
+    }
+
+    pub fn is_solution_correct(&self, sent_solution: &Solution) -> bool {
+        let solution_stored_as = hash(sent_solution).to_bytes();
+        let correct_solution = self.current_solution();
+
+        // We should always get a solution here since we assert first that we have one
+        if let Some(correct_solution) = correct_solution {
+            solution_stored_as.eq(correct_solution)
+        } else {
+            false
+        }
     }
 }
