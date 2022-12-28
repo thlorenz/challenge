@@ -19,8 +19,9 @@ use crate::{
         assert_can_add_solutions, assert_challenger_has_tries_remaining,
         assert_has_solution, assert_has_solutions, assert_is_signer,
         assert_keys_equal, assert_max_supported_solutions, assert_not_finished,
-        assert_not_started, assert_started, reallocate_account,
-        transfer_lamports, AllocateAndAssignAccountArgs, ReallocateAccountArgs,
+        assert_not_started, assert_started, create_mint_for_challenge,
+        reallocate_account, transfer_lamports, AllocateAndAssignAccountArgs,
+        CreateMintForChallengeArgs, ReallocateAccountArgs,
     },
     Solution,
 };
@@ -104,6 +105,15 @@ fn process_create_challenge<'a>(
     // Alternatively we can make sure of that here
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
+    let redeem_info = next_account_info(account_info_iter)?;
+    let spl_token_program_info = next_account_info(account_info_iter)?;
+
+    assert_keys_equal(redeem_info.key, &redeem, || {
+        format!(
+            "Provided redeem_account ({}) does not redeem key passed ({})",
+            redeem_info.key, redeem
+        )
+    })?;
 
     let (pda, bump) =
         Challenge::shank_pda(&challenge_id(), creator_info.key, &id);
@@ -119,6 +129,7 @@ fn process_create_challenge<'a>(
     let seeds =
         Challenge::shank_seeds_with_bump(creator_info.key, &id, &bump_arr);
 
+    // Create Challenge PDA account
     let size = Challenge::needed_size(&solutions, &id);
     allocate_account_and_assign_owner(AllocateAndAssignAccountArgs {
         payer_info,
@@ -128,6 +139,16 @@ fn process_create_challenge<'a>(
         size,
     })?;
 
+    // Create redeem mint
+    create_mint_for_challenge(CreateMintForChallengeArgs {
+        payer_info,
+        mint_info: redeem_info,
+        mint_authority_info: creator_info,
+        spl_token_program_info,
+        signer_seeds: &seeds,
+    })?;
+
+    // Serialize Challenge
     let challenge = Challenge {
         authority: *creator_info.key,
         id,

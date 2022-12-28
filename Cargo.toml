@@ -23,6 +23,9 @@ num-derive = "0.3.3"
 num-traits = "0.2.15"
 thiserror = "1.0.37"
 
+
+spl-token = { version = "3.5.0", features = ["no-entrypoint"] }
+
 [dev-dependencies]
 assert_matches = "1.5.0"
 solana-program-test = "1.14.10"

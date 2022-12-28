@@ -85,6 +85,8 @@ pub fn create_challenge(
             AccountMeta::new(payer, true),
             AccountMeta::new_readonly(creator, false),
             AccountMeta::new(challenge_pda, false),
+            AccountMeta::new(redeem, false),
+            AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(system_program::id(), false),
         ],
         data: ChallengeInstruction::CreateChallenge {
