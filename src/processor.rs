@@ -10,7 +10,7 @@ use crate::{
     challenge_id, check_id,
     ixs::ChallengeInstruction,
     state::{
-        Challenge, Challenger, HasSize, StateFromPdaAccountValue,
+        Challenge, Challenger, HasSize, Redeem, StateFromPdaAccountValue,
         TryStateFromAccount,
     },
     utils::{
@@ -105,48 +105,65 @@ fn process_create_challenge<'a>(
     // Alternatively we can make sure of that here
     let creator_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
-    let redeem_info = next_account_info(account_info_iter)?;
+    let redeem_pda_info = next_account_info(account_info_iter)?;
     let spl_token_program_info = next_account_info(account_info_iter)?;
 
-    assert_keys_equal(redeem_info.key, &redeem, || {
+    assert_keys_equal(redeem_pda_info.key, &redeem, || {
         format!(
             "Provided redeem_account ({}) does not redeem key passed ({})",
-            redeem_info.key, redeem
+            redeem_pda_info.key, redeem
         )
     })?;
 
-    let (pda, bump) =
-        Challenge::shank_pda(&challenge_id(), creator_info.key, &id);
-    assert_keys_equal(challenge_pda_info.key, &pda, || {
-        format!(
+    // Create Challenge PDA account
+    {
+        let (challenge_pda, bump) =
+            Challenge::shank_pda(&challenge_id(), creator_info.key, &id);
+        let bump_arr = [bump];
+        let challenge_seeds =
+            Challenge::shank_seeds_with_bump(creator_info.key, &id, &bump_arr);
+
+        assert_keys_equal(challenge_pda_info.key, &challenge_pda, || {
+            format!(
             "PDA for the challenge for creator ({}) and id ({}) is incorrect",
             creator_info.key, id
         )
-    })?;
-    assert_account_has_no_data(challenge_pda_info)?;
+        })?;
+        assert_account_has_no_data(challenge_pda_info)?;
 
-    let bump_arr = [bump];
-    let seeds =
-        Challenge::shank_seeds_with_bump(creator_info.key, &id, &bump_arr);
-
-    // Create Challenge PDA account
-    let size = Challenge::needed_size(&solutions, &id);
-    allocate_account_and_assign_owner(AllocateAndAssignAccountArgs {
-        payer_info,
-        account_info: challenge_pda_info,
-        owner: program_id,
-        signer_seeds: &seeds,
-        size,
-    })?;
+        let size = Challenge::needed_size(&solutions, &id);
+        allocate_account_and_assign_owner(AllocateAndAssignAccountArgs {
+            payer_info,
+            account_info: challenge_pda_info,
+            owner: program_id,
+            signer_seeds: &challenge_seeds,
+            size,
+        })?;
+    }
 
     // Create redeem mint
-    create_mint_for_challenge(CreateMintForChallengeArgs {
-        payer_info,
-        mint_info: redeem_info,
-        mint_authority_info: creator_info,
-        spl_token_program_info,
-        signer_seeds: &seeds,
-    })?;
+    {
+        let (redeem_pda, bump) =
+            Redeem::shank_pda(&challenge_id(), challenge_pda_info.key);
+        let bump_arr = [bump];
+        let redeem_seeds =
+            Redeem::shank_seeds_with_bump(challenge_pda_info.key, &bump_arr);
+
+        assert_keys_equal(redeem_pda_info.key, &redeem_pda, || {
+            format!(
+            "PDA for the challenge redeem ('{}') is incorrect, should be '{}'",
+            redeem_pda_info.key, redeem_pda
+        )
+        })?;
+        assert_account_has_no_data(redeem_pda_info)?;
+        create_mint_for_challenge(CreateMintForChallengeArgs {
+            payer_info,
+            mint_info: redeem_pda_info,
+            mint_authority_info: creator_info,
+            spl_token_program_info,
+            signer_seeds: &redeem_seeds,
+        })?;
+    }
 
     // Serialize Challenge
     let challenge = Challenge {

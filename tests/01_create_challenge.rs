@@ -2,7 +2,10 @@
 
 use crate::utils::{get_deserialized, hash_solution};
 use assert_matches::assert_matches;
-use challenge::{challenge_id, ixs, state::Challenge};
+use challenge::{
+    challenge_id, ixs,
+    state::{Challenge, Redeem},
+};
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 
@@ -20,7 +23,6 @@ const ID: &str = "challenge-id";
 async fn create_challenge_without_solutions() {
     let mut context = program_test().start_with_context().await;
     let creator = context.payer.pubkey();
-    let redeem = Pubkey::new_unique();
 
     let ix = ixs::create_challenge(
         creator,
@@ -28,7 +30,6 @@ async fn create_challenge_without_solutions() {
         ID.to_string(),
         1000,
         1,
-        redeem,
         vec![],
     )
     .expect("failed to create instruction");
@@ -66,7 +67,7 @@ async fn create_challenge_without_solutions() {
         } => {
             assert_eq!(&authority, &creator);
             assert_eq!(id, ID);
-            assert_eq!(&r, &redeem);
+            assert_eq!(r, Redeem::pda(&challenge_pda).0);
             assert!(solutions.is_empty());
             assert_eq!(acc.data.len(), Challenge::needed_size(&solutions, ID));
         }
@@ -77,7 +78,6 @@ async fn create_challenge_without_solutions() {
 async fn create_challenge_with_two_solutions() {
     let mut context = program_test().start_with_context().await;
     let creator = context.payer.pubkey();
-    let redeem = Pubkey::new_unique();
 
     let ix = ixs::create_challenge(
         creator,
@@ -85,7 +85,6 @@ async fn create_challenge_with_two_solutions() {
         ID.to_string(),
         1000,
         1,
-        redeem,
         vec!["hello", "world"],
     )
     .expect("failed to create instruction");
@@ -124,7 +123,7 @@ async fn create_challenge_with_two_solutions() {
         } => {
             assert_eq!(&authority, &creator);
             assert_eq!(id, ID);
-            assert_eq!(&r, &redeem);
+            assert_eq!(r, Redeem::pda(&challenge_pda).0);
             assert_eq!(solutions.len(), 2);
             assert_eq!(solutions[0], hash_solution("hello"));
             assert_eq!(solutions[1], hash_solution("world"));
@@ -137,7 +136,6 @@ async fn create_challenge_with_two_solutions() {
 async fn create_two_challenges_same_creator_different_id() {
     let mut context = program_test().start_with_context().await;
     let creator = context.payer.pubkey();
-    let redeem = Pubkey::new_unique();
 
     let fst_id = "challenge-id-1";
     let snd_id = "challenge-id-2";
@@ -150,7 +148,6 @@ async fn create_two_challenges_same_creator_different_id() {
             fst_id.to_string(),
             1000,
             1,
-            redeem,
             vec!["hello", "world"],
         )
         .expect("failed to create instruction");
@@ -177,7 +174,6 @@ async fn create_two_challenges_same_creator_different_id() {
             snd_id.to_string(),
             2000,
             2,
-            redeem,
             vec!["hola", "mundo"],
         )
         .expect("failed to create instruction");
@@ -218,7 +214,7 @@ async fn create_two_challenges_same_creator_different_id() {
             } => {
                 assert_eq!(&authority, &creator);
                 assert_eq!(id, fst_id);
-                assert_eq!(&r, &redeem);
+                assert_eq!(r, Redeem::pda(&challenge_pda).0);
                 assert_eq!(solutions.len(), 2);
                 assert_eq!(solutions[0], hash_solution("hello"));
                 assert_eq!(solutions[1], hash_solution("world"));
@@ -249,7 +245,7 @@ async fn create_two_challenges_same_creator_different_id() {
             } => {
                 assert_eq!(&authority, &creator);
                 assert_eq!(id, snd_id);
-                assert_eq!(&r, &redeem);
+                assert_eq!(r, Redeem::pda(&challenge_pda).0);
                 assert_eq!(solutions.len(), 2);
                 assert_eq!(solutions[0], hash_solution("hola"));
                 assert_eq!(solutions[1], hash_solution("mundo"));
@@ -267,7 +263,6 @@ async fn create_two_challenges_same_creator_different_id() {
 async fn create_challenge_with_invalid_pda() {
     let mut context = program_test().start_with_context().await;
     let creator = context.payer.pubkey();
-    let redeem = Pubkey::new_unique();
 
     let ix = ixs_custom::create_challenge_with_pda(
         creator,
@@ -275,7 +270,6 @@ async fn create_challenge_with_invalid_pda() {
         ID.to_string(),
         1000,
         1,
-        redeem,
         vec![],
         Pubkey::new_unique(),
     )
@@ -300,7 +294,6 @@ async fn create_challenge_with_invalid_pda() {
 async fn create_two_challenges_same_creator_same_id() {
     let mut context = program_test().start_with_context().await;
     let creator = context.payer.pubkey();
-    let redeem = Pubkey::new_unique();
 
     let fst_id = "challenge-id-1";
     let snd_id = "challenge-id-1";
@@ -313,7 +306,6 @@ async fn create_two_challenges_same_creator_same_id() {
             fst_id.to_string(),
             1000,
             1,
-            redeem,
             vec!["hello", "world"],
         )
         .expect("failed to create instruction");
@@ -340,7 +332,6 @@ async fn create_two_challenges_same_creator_same_id() {
             snd_id.to_string(),
             2000,
             2,
-            redeem,
             vec!["hola", "mundo"],
         )
         .expect("failed to create instruction");

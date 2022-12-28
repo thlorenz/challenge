@@ -1,5 +1,7 @@
 use borsh::BorshSerialize;
-use challenge::{challenge_id, ixs::ChallengeInstruction, Solution};
+use challenge::{
+    challenge_id, ixs::ChallengeInstruction, state::Redeem, Solution,
+};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     program_error::ProgramError,
@@ -14,10 +16,10 @@ pub fn create_challenge_with_pda(
     id: String,
     admit_cost: u64,
     tries_per_admit: u8,
-    redeem: Pubkey,
     solutions: Vec<Solution>,
     challenge_pda: Pubkey,
 ) -> Result<Instruction, ProgramError> {
+    let (redeem, _) = Redeem::pda(&challenge_pda);
     let ix = Instruction {
         program_id: challenge_id(),
         accounts: vec![
