@@ -8,7 +8,7 @@ use solana_program::{
 
 use crate::{
     challenge_id,
-    state::{Challenge, Challenger},
+    state::{Challenge, Challenger, Redeem},
     utils::{hash_solution_challenger_sends, hash_solutions},
     Solution,
 };
@@ -19,6 +19,9 @@ pub enum ChallengeInstruction {
         id: String,
         admit_cost: u64,
         tries_per_admit: u8,
+
+        /// The PDA address of the mint that each challenger that solves the challenge receives.
+        /// It is derived from the challenge PDA.
         redeem: Pubkey,
 
         /// Each solution is a hash array of of 32 bytes.
@@ -63,7 +66,6 @@ pub enum ChallengeInstruction {
 /// * [id]: unique id identifying the challenge. The same creator cannot reuse ids for different challenges
 /// * [admit_cost]: the amount of SOL that must be paid to admit a challenger
 /// * [tries_per_admit]: the number of tries that a challenger gets for the given admit_cost
-/// * [redeem]: the address that will receive the SOL when a solution of the challenge found
 /// * [solutions]: solutions to be solved in clear text, they are encoded via
 ///   `sha256(sha256(solution))` before being passed on to the program
 pub fn create_challenge(
@@ -72,11 +74,12 @@ pub fn create_challenge(
     id: String,
     admit_cost: u64,
     tries_per_admit: u8,
-    redeem: Pubkey,
     solutions: Vec<&str>,
 ) -> Result<Instruction, ProgramError> {
     let (challenge_pda, _) =
         Challenge::shank_pda(&challenge_id(), &creator, &id);
+    let (redeem_pda, _) = Redeem::pda(&challenge_pda);
+
     let solutions = hash_solutions(&solutions);
 
     let ix = Instruction {
@@ -85,13 +88,15 @@ pub fn create_challenge(
             AccountMeta::new(payer, true),
             AccountMeta::new_readonly(creator, false),
             AccountMeta::new(challenge_pda, false),
+            AccountMeta::new(redeem_pda, false),
+            AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(system_program::id(), false),
         ],
         data: ChallengeInstruction::CreateChallenge {
             id,
             admit_cost,
             tries_per_admit,
-            redeem,
+            redeem: redeem_pda,
             solutions,
         }
         .try_to_vec()?,

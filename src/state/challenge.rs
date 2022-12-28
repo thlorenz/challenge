@@ -16,7 +16,7 @@ use crate::{
 };
 
 use super::{
-    HasPda, HasSize, StateFromPdaAccountValue, TryStateFromPdaAccount,
+    HasPda, HasSize, Redeem, StateFromPdaAccountValue, TryStateFromPdaAccount,
 };
 
 #[derive(ShankAccount, BorshSerialize, BorshDeserialize)]
@@ -178,5 +178,9 @@ impl Challenge {
         } else {
             false
         }
+    }
+
+    pub fn redeem_pda(&self) -> (Pubkey, u8) {
+        Redeem::pda(&self.pda().0)
     }
 }
