@@ -9,16 +9,14 @@ use super::{
     AllocateAndAssignAccountArgs,
 };
 
-struct InitMintForChallengeArgs<'a> {
+struct InitMintArgs<'a> {
     pub mint_info: &'a AccountInfo<'a>,
     pub mint_authority_info: &'a AccountInfo<'a>,
     pub spl_token_program_info: &'a AccountInfo<'a>,
 }
 
-fn initialize_mint_for_challenge(
-    args: InitMintForChallengeArgs,
-) -> Result<(), ProgramError> {
-    let InitMintForChallengeArgs {
+fn initialize_mint(args: InitMintArgs) -> Result<(), ProgramError> {
+    let InitMintArgs {
         mint_info,
         mint_authority_info,
         spl_token_program_info,
@@ -43,7 +41,7 @@ fn initialize_mint_for_challenge(
     Ok(())
 }
 
-pub struct CreateMintForChallengeArgs<'a, 'b> {
+pub struct CreateMintArgs<'a, 'b> {
     pub payer_info: &'a AccountInfo<'a>,
     pub mint_info: &'a AccountInfo<'a>,
     pub mint_authority_info: &'a AccountInfo<'a>,
@@ -51,12 +49,10 @@ pub struct CreateMintForChallengeArgs<'a, 'b> {
     pub signer_seeds: &'b [&'b [u8]],
 }
 
-pub fn create_mint_for_challenge(
-    args: CreateMintForChallengeArgs,
-) -> Result<(), ProgramError> {
-    msg!("  create_mint_for_challenge()");
+pub fn create_mint(args: CreateMintArgs) -> Result<(), ProgramError> {
+    msg!("  create_mint_for()");
 
-    let CreateMintForChallengeArgs {
+    let CreateMintArgs {
         payer_info,
         mint_info,
         mint_authority_info,
@@ -79,7 +75,7 @@ pub fn create_mint_for_challenge(
         signer_seeds,
     })?;
 
-    initialize_mint_for_challenge(InitMintForChallengeArgs {
+    initialize_mint(InitMintArgs {
         mint_info,
         mint_authority_info,
         spl_token_program_info,

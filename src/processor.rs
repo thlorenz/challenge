@@ -19,9 +19,9 @@ use crate::{
         assert_can_add_solutions, assert_challenger_has_tries_remaining,
         assert_has_solution, assert_has_solutions, assert_is_signer,
         assert_keys_equal, assert_max_supported_solutions, assert_not_finished,
-        assert_not_started, assert_started, create_mint_for_challenge,
-        reallocate_account, transfer_lamports, AllocateAndAssignAccountArgs,
-        CreateMintForChallengeArgs, ReallocateAccountArgs,
+        assert_not_started, assert_started, create_mint, reallocate_account,
+        transfer_lamports, AllocateAndAssignAccountArgs,
+        CreateMintArgs, ReallocateAccountArgs,
     },
     Solution,
 };
@@ -156,7 +156,7 @@ fn process_create_challenge<'a>(
         )
         })?;
         assert_account_has_no_data(redeem_pda_info)?;
-        create_mint_for_challenge(CreateMintForChallengeArgs {
+        create_mint(CreateMintArgs {
             payer_info,
             mint_info: redeem_pda_info,
             mint_authority_info: creator_info,
