@@ -116,11 +116,18 @@ impl HasSize for Challenge {
 
 impl HasPda for Challenge {
     fn pda(&self) -> (Pubkey, u8) {
-        Challenge::shank_pda(&challenge_id(), &self.authority, &self.id)
+        Challenge::pda_for(&self.authority, &self.id)
     }
 }
 
 impl Challenge {
+    pub fn pda_for(creator: &Pubkey, id: &str) -> (Pubkey, u8) {
+        Challenge::shank_pda(&challenge_id(), creator, id)
+    }
+
+    pub fn seeds<'a>(&'a self, bump: &'a [u8; 1]) -> [&'a [u8]; 4] {
+        Challenge::shank_seeds_with_bump(&self.authority, &self.id, bump)
+    }
     pub fn needed_size(solutions: &[Solution], id: &str) -> usize {
         EMPTY_CHALLENGE_SIZE_WITH_EMPTY_ID
             + id.len()
@@ -181,6 +188,6 @@ impl Challenge {
     }
 
     pub fn redeem_pda(&self) -> (Pubkey, u8) {
-        Redeem::pda(&self.pda().0)
+        Redeem::new(self.pda().0).pda()
     }
 }

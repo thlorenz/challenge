@@ -4,16 +4,18 @@ use assert_matches::assert_matches;
 
 use challenge::{
     ixs,
-    state::{Challenge, Challenger, HasPda},
+    state::{Challenge, Challenger, HasPda, Redeem},
     utils::hash_solutions,
 };
 
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 
-use crate::utils::add_pda_account;
 #[allow(unused)]
 use crate::utils::dump_account;
+use crate::utils::{
+    add_mint_to_redeem, add_pda_account, verify_minted_when_redeeming,
+};
 use solana_sdk::{
     signature::Keypair, signer::Signer, transaction::Transaction,
 };
@@ -74,6 +76,8 @@ async fn redeem_for_valid_challenge_and_two_challengers_with_correct_solution()
     let mut context = program_test().start_with_context().await;
     let creator = Pubkey::new_unique();
 
+    let redeem = Redeem::for_challenge_with(&creator, ID);
+
     let solutions = hash_solutions(&["hello", "world"]);
     let challenge = &Challenge {
         authority: creator,
@@ -82,12 +86,14 @@ async fn redeem_for_valid_challenge_and_two_challengers_with_correct_solution()
         finished: false,
         admit_cost: ADMIT_COST,
         tries_per_admit: TRIES_PER_ADMIT,
-        redeem: Pubkey::new_unique(),
+        redeem: redeem.pda().0,
         solving: 0,
         solutions,
     };
     add_pda_account(&mut context, challenge);
+    add_mint_to_redeem(&mut context, &redeem);
 
+    let (mint_pda, _) = redeem.pda();
     // First challenger solves the challenge
     // NOTE: that we're not sure yet if we allow the same challaneger to solve
     // multiple times. Therefore we simulate two different challengers here
@@ -132,6 +138,15 @@ async fn redeem_for_valid_challenge_and_two_challengers_with_correct_solution()
                 redeem: _,
             }
         );
+
+        verify_minted_when_redeeming(
+            &mut context,
+            mint_pda,
+            1,
+            &redeem,
+            &challenger,
+        )
+        .await;
     }
     // Second challenger solves the challenge which finishes it
     {
@@ -175,6 +190,14 @@ async fn redeem_for_valid_challenge_and_two_challengers_with_correct_solution()
                 redeem: _,
             }
         );
+        verify_minted_when_redeeming(
+            &mut context,
+            mint_pda,
+            2,
+            &redeem,
+            &challenger,
+        )
+        .await;
     }
 }
 

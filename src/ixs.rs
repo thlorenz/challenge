@@ -8,7 +8,7 @@ use solana_program::{
 
 use crate::{
     challenge_id,
-    state::{Challenge, Challenger, Redeem},
+    state::{Challenge, Challenger, HasPda, Redeem},
     utils::{hash_solution_challenger_sends, hash_solutions},
     Solution,
 };
@@ -78,7 +78,9 @@ pub fn create_challenge(
 ) -> Result<Instruction, ProgramError> {
     let (challenge_pda, _) =
         Challenge::shank_pda(&challenge_id(), &creator, &id);
-    let (redeem_pda, _) = Redeem::pda(&challenge_pda);
+
+    let redeem = Redeem::new(challenge_pda);
+    let (redeem_pda, _) = redeem.pda();
 
     let solutions = hash_solutions(&solutions);
 
@@ -205,6 +207,19 @@ pub fn admit_challenger(
     })
 }
 
+#[derive(Debug)]
+struct RedeemAccounts {
+    payer: AccountMeta,
+    challenge_pda: AccountMeta,
+    challenger: AccountMeta,
+    challenger_pda: AccountMeta,
+    redeem_pda: AccountMeta,
+    redeem_ata: AccountMeta,
+    spl_token_program: AccountMeta,
+    spl_associated_token_program: AccountMeta,
+    system_program: AccountMeta,
+}
+
 // -----------------
 // Redeem by providing solution
 // -----------------
@@ -229,15 +244,39 @@ pub fn redeem(
         Challenge::shank_pda(&challenge_id(), &creator, id);
     let (challenger_pda, _) =
         Challenger::shank_pda(&challenge_id(), &challenge_pda, &challenger);
+    let redeem = Redeem::new(challenge_pda);
+    let redeem_ata = redeem.ata(&challenger);
+
+    let accounts = RedeemAccounts {
+        payer: AccountMeta::new(payer, true),
+        challenge_pda: AccountMeta::new(challenge_pda, false),
+        challenger: AccountMeta::new_readonly(challenger, true),
+        challenger_pda: AccountMeta::new(challenger_pda, false),
+        redeem_pda: AccountMeta::new(redeem.pda().0, false),
+        redeem_ata: AccountMeta::new(redeem_ata, false),
+        spl_token_program: AccountMeta::new_readonly(spl_token::id(), false),
+        spl_associated_token_program: AccountMeta::new_readonly(
+            spl_associated_token_account::id(),
+            false,
+        ),
+        system_program: AccountMeta::new_readonly(system_program::id(), false),
+    };
 
     let ix = Instruction {
         program_id: challenge_id(),
         accounts: vec![
-            AccountMeta::new(payer, true),
-            AccountMeta::new(challenge_pda, false),
-            AccountMeta::new_readonly(challenger, true),
-            AccountMeta::new(challenger_pda, false),
-            AccountMeta::new_readonly(system_program::id(), false),
+            accounts.payer,
+            accounts.challenge_pda,
+            // challenger
+            accounts.challenger,
+            accounts.challenger_pda,
+            // redeem
+            accounts.redeem_pda,
+            accounts.redeem_ata,
+            // programs
+            accounts.spl_token_program,
+            accounts.spl_associated_token_program,
+            accounts.system_program,
         ],
         data: ChallengeInstruction::Redeem {
             solution: challenger_sends,

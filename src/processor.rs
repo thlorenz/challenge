@@ -10,8 +10,8 @@ use crate::{
     challenge_id, check_id,
     ixs::ChallengeInstruction,
     state::{
-        Challenge, Challenger, HasSize, Redeem, StateFromPdaAccountValue,
-        TryStateFromAccount,
+        Challenge, Challenger, HasPda, HasSize, Redeem,
+        StateFromPdaAccountValue, TryStateFromAccount,
     },
     utils::{
         allocate_account_and_assign_owner, assert_account_does_not_exist,
@@ -19,9 +19,9 @@ use crate::{
         assert_can_add_solutions, assert_challenger_has_tries_remaining,
         assert_has_solution, assert_has_solutions, assert_is_signer,
         assert_keys_equal, assert_max_supported_solutions, assert_not_finished,
-        assert_not_started, assert_started, create_mint_for_challenge,
+        assert_not_started, assert_started, create_mint, mint_token_to_recvr,
         reallocate_account, transfer_lamports, AllocateAndAssignAccountArgs,
-        CreateMintForChallengeArgs, ReallocateAccountArgs,
+        CreateMintArgs, MintTokenArgs, ReallocateAccountArgs,
     },
     Solution,
 };
@@ -156,10 +156,10 @@ fn process_create_challenge<'a>(
         )
         })?;
         assert_account_has_no_data(redeem_pda_info)?;
-        create_mint_for_challenge(CreateMintForChallengeArgs {
+        create_mint(CreateMintArgs {
             payer_info,
             mint_info: redeem_pda_info,
-            mint_authority_info: creator_info,
+            mint_authority_info: challenge_pda_info,
             spl_token_program_info,
             signer_seeds: &redeem_seeds,
         })?;
@@ -389,10 +389,20 @@ fn process_redeem<'a>(
     })?;
 
     let account_info_iter = &mut accounts.iter();
+
     let payer_info = next_account_info(account_info_iter)?;
     let challenge_pda_info = next_account_info(account_info_iter)?;
+
+    // challenger
     let challenger_info = next_account_info(account_info_iter)?;
     let challenger_pda_info = next_account_info(account_info_iter)?;
+
+    // redeem
+    let redeem_info = next_account_info(account_info_iter)?;
+    let redeem_ata_challenger_info = next_account_info(account_info_iter)?;
+
+    // programs
+    let spl_token_program_info = next_account_info(account_info_iter)?;
 
     assert_is_signer(payer_info, "payer")?;
     assert_is_signer(challenger_info, "challenger")?;
@@ -419,6 +429,13 @@ fn process_redeem<'a>(
     assert_started(&challenge)?;
     assert_not_finished(&challenge)?;
 
+    assert_keys_equal(redeem_info.key, &challenge.redeem, || {
+        format!(
+            "Provided redeem ({}) does not match the redeem ({}) for the challenge",
+            redeem_info.key, challenge.redeem
+        )
+    })?;
+
     assert_challenger_has_tries_remaining(&challenger)?;
     assert_has_solution(&challenge)?;
 
@@ -436,8 +453,20 @@ fn process_redeem<'a>(
         // update challenger
         challenger.redeemed = true;
 
-        // TODO(thlorenz): mint_token_to_player but first need to init the token when challenge is
-        msg!("TODO: mint token ({})", challenge.redeem);
+        let (_, bump) = challenge.pda();
+        let bump_arr = [bump];
+        let challenge_seeds = challenge.seeds(&bump_arr);
+
+        msg!("  mint token ({})", challenge.redeem);
+        mint_token_to_recvr(MintTokenArgs {
+            payer_info,
+            recvr_info: challenger_info,
+            recvr_ata_info: redeem_ata_challenger_info,
+            mint_info: redeem_info,
+            mint_authority_info: challenge_pda_info,
+            spl_token_program_info,
+            signer_seeds: &challenge_seeds,
+        })?;
     } else {
         msg!("Provided solution was incorrect");
     }
