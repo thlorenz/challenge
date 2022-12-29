@@ -13,7 +13,9 @@ use solana_program_test::*;
 
 #[allow(unused)]
 use crate::utils::dump_account;
-use crate::utils::{add_mint_to_redeem, add_pda_account};
+use crate::utils::{
+    add_mint_to_redeem, add_pda_account, verify_minted_when_redeeming,
+};
 use solana_sdk::{
     signature::Keypair, signer::Signer, transaction::Transaction,
 };
@@ -91,6 +93,7 @@ async fn redeem_for_valid_challenge_and_two_challengers_with_correct_solution()
     add_pda_account(&mut context, challenge);
     add_mint_to_redeem(&mut context, &redeem);
 
+    let (mint_pda, _) = redeem.pda();
     // First challenger solves the challenge
     // NOTE: that we're not sure yet if we allow the same challaneger to solve
     // multiple times. Therefore we simulate two different challengers here
@@ -135,6 +138,15 @@ async fn redeem_for_valid_challenge_and_two_challengers_with_correct_solution()
                 redeem: _,
             }
         );
+
+        verify_minted_when_redeeming(
+            &mut context,
+            mint_pda,
+            1,
+            &redeem,
+            &challenger,
+        )
+        .await;
     }
     // Second challenger solves the challenge which finishes it
     {
@@ -178,6 +190,14 @@ async fn redeem_for_valid_challenge_and_two_challengers_with_correct_solution()
                 redeem: _,
             }
         );
+        verify_minted_when_redeeming(
+            &mut context,
+            mint_pda,
+            2,
+            &redeem,
+            &challenger,
+        )
+        .await;
     }
 }
 

@@ -28,6 +28,7 @@ pub async fn get_account(
         .expect("get_account(): account empty")
 }
 
+#[allow(unused)]
 pub async fn get_unpacked<T: Pack>(
     context: &mut ProgramTestContext,
     pubkey: &Pubkey,

@@ -261,7 +261,6 @@ pub fn redeem(
         ),
         system_program: AccountMeta::new_readonly(system_program::id(), false),
     };
-    // eprintln!("{:#?}", accounts);
 
     let ix = Instruction {
         program_id: challenge_id(),

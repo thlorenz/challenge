@@ -3,7 +3,9 @@ use solana_program::hash::hash;
 use solana_program_test::ProgramTest;
 
 mod accounts;
+mod mints;
 pub use accounts::*;
+pub use mints::*;
 pub mod ixs_custom;
 
 pub fn program_test() -> ProgramTest {
