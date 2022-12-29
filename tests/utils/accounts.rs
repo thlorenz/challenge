@@ -5,7 +5,8 @@ use challenge::{
     utils::hash_solutions,
 };
 use solana_program::{
-    borsh::try_from_slice_unchecked, pubkey::Pubkey, rent::Rent,
+    borsh::try_from_slice_unchecked, program_pack::Pack, pubkey::Pubkey,
+    rent::Rent,
 };
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -26,6 +27,16 @@ pub async fn get_account(
         .expect("get_account(): account empty")
 }
 
+pub async fn get_unpacked<T: Pack>(
+    context: &mut ProgramTestContext,
+    pubkey: &Pubkey,
+) -> (Account, T) {
+    let acc = get_account(context, pubkey).await;
+
+    let value = T::unpack_unchecked(&acc.data).expect("Unable to deserialize");
+    (acc, value)
+}
+
 #[allow(unused)] // it actually is in 01_create_challenge.rs
 pub async fn get_deserialized<T: BorshDeserialize>(
     context: &mut ProgramTestContext,
@@ -43,6 +54,16 @@ pub async fn dump_account<T: BorshDeserialize + std::fmt::Debug>(
     pubkey: &Pubkey,
 ) {
     let (acc, value) = get_deserialized::<T>(context, pubkey).await;
+    eprintln!("{:#?}", value);
+    eprintln!("{:#?}", acc);
+}
+
+#[allow(unused)]
+pub async fn dump_packed_account<T: Pack + std::fmt::Debug>(
+    context: &mut ProgramTestContext,
+    pubkey: &Pubkey,
+) {
+    let (acc, value) = get_unpacked::<T>(context, pubkey).await;
     eprintln!("{:#?}", value);
     eprintln!("{:#?}", acc);
 }

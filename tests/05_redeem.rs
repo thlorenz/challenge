@@ -4,7 +4,7 @@ use assert_matches::assert_matches;
 
 use challenge::{
     ixs,
-    state::{Challenge, Challenger, HasPda},
+    state::{Challenge, Challenger, HasPda, Redeem},
     utils::hash_solutions,
 };
 
@@ -74,6 +74,8 @@ async fn redeem_for_valid_challenge_and_two_challengers_with_correct_solution()
     let mut context = program_test().start_with_context().await;
     let creator = Pubkey::new_unique();
 
+    let redeem = Redeem::for_challenge_with(&creator, ID);
+
     let solutions = hash_solutions(&["hello", "world"]);
     let challenge = &Challenge {
         authority: creator,
@@ -82,7 +84,7 @@ async fn redeem_for_valid_challenge_and_two_challengers_with_correct_solution()
         finished: false,
         admit_cost: ADMIT_COST,
         tries_per_admit: TRIES_PER_ADMIT,
-        redeem: Pubkey::new_unique(),
+        redeem: redeem.pda().0,
         solving: 0,
         solutions,
     };
