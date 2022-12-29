@@ -33,11 +33,20 @@ impl Redeem {
     }
 
     pub fn ata(&self, recvr: &Pubkey) -> Pubkey {
-        get_associated_token_address_with_program_id(
+        let ata = get_associated_token_address_with_program_id(
             recvr,
             &self.pda,
-            &spl_associated_token_account::id(),
-        )
+            &spl_token::id(),
+        );
+        eprintln!(
+            "recvr: {} mint: {} ata: {}\n{}
+            ",
+            recvr,
+            self.pda,
+            ata,
+            &spl_token::id(),
+        );
+        ata
     }
 }
 

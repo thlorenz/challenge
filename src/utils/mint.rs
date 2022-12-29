@@ -115,10 +115,17 @@ pub fn mint_token_to_recvr(args: MintTokenArgs) -> Result<(), ProgramError> {
         mint_info.key,
         spl_token_program_info.key,
     );
+    msg!(
+        "recvr: {} mint: {} ata: {}\n{}",
+        recvr_info.key,
+        mint_info.key,
+        ata,
+        spl_token_program_info.key,
+    );
     assert_keys_equal(recvr_ata_info.key, &ata, || {
         format!(
-            "The provided ATA ('{}') does not match ('{}')",
-            recvr_info.key, ata
+            "The provided recvr ATA ('{}') does not match ('{}')",
+            recvr_ata_info.key, ata
         )
     })?;
 

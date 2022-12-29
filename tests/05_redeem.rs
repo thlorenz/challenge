@@ -11,9 +11,9 @@ use challenge::{
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 
-use crate::utils::add_pda_account;
 #[allow(unused)]
 use crate::utils::dump_account;
+use crate::utils::{add_mint_to_redeem, add_pda_account};
 use solana_sdk::{
     signature::Keypair, signer::Signer, transaction::Transaction,
 };
@@ -89,6 +89,7 @@ async fn redeem_for_valid_challenge_and_two_challengers_with_correct_solution()
         solutions,
     };
     add_pda_account(&mut context, challenge);
+    add_mint_to_redeem(&mut context, &redeem);
 
     // First challenger solves the challenge
     // NOTE: that we're not sure yet if we allow the same challaneger to solve

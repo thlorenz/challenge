@@ -1,18 +1,19 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use challenge::{
     challenge_id,
-    state::{Challenge, HasPda, HasSize},
+    state::{Challenge, HasPda, HasSize, Redeem},
     utils::hash_solutions,
 };
 use solana_program::{
-    borsh::try_from_slice_unchecked, program_pack::Pack, pubkey::Pubkey,
-    rent::Rent,
+    borsh::try_from_slice_unchecked, program_option::COption,
+    program_pack::Pack, pubkey::Pubkey, rent::Rent,
 };
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     account::{Account, AccountSharedData},
     signer::Signer,
 };
+use spl_token::state::Mint;
 
 #[allow(unused)]
 pub async fn get_account(
@@ -100,6 +101,50 @@ pub fn add_pda_account<T: HasSize + HasPda + BorshSerialize>(
     context.set_account(&address, &account);
 
     account.into()
+}
+
+#[allow(unused)]
+pub fn add_pack_account<T: Pack>(
+    context: &mut ProgramTestContext,
+    address: &Pubkey,
+    value: &T,
+    owner: &Pubkey,
+) -> Account {
+    let space = T::get_packed_len();
+    let lamports = Rent::default().minimum_balance(space);
+
+    let mut account = AccountSharedData::new(lamports, space, owner);
+    let mut dst = vec![0u8; space];
+    T::pack_into_slice(value, dst.as_mut_slice());
+    account.set_data(dst);
+    context.set_account(address, &account);
+
+    account.into()
+}
+
+#[allow(unused)]
+pub fn add_mint_account(
+    context: &mut ProgramTestContext,
+    address: &Pubkey,
+    mint: &Mint,
+) -> Account {
+    add_pack_account(context, address, mint, &spl_token::id())
+}
+
+#[allow(unused)]
+pub fn add_mint_to_redeem(
+    context: &mut ProgramTestContext,
+    redeem: &Redeem,
+) -> Account {
+    let (mint_pda, _) = redeem.pda();
+    let mint = Mint {
+        mint_authority: COption::Some(redeem.challenge_pda),
+        supply: 0,
+        decimals: 0,
+        is_initialized: true,
+        freeze_authority: COption::None,
+    };
+    add_mint_account(context, &mint_pda, &mint)
 }
 
 #[allow(unused)] // it actually is in 02_add_solutions.rs
