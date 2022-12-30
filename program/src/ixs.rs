@@ -11,7 +11,6 @@ use crate::{
     challenge_id,
     state::{Challenge, Challenger, HasPda, Redeem},
     utils::{hash_solution_challenger_sends, hash_solutions},
-    Solution,
 };
 
 #[derive(BorshSerialize, BorshDeserialize, Debug, ShankInstruction)]
@@ -36,7 +35,7 @@ pub enum ChallengeInstruction {
         /// Thus the max size of solutions is 32 * 256 = 8,192 bytes.
         /// Transaction size is ~1,024 bytes which means if more solutions are desired they
         /// need to be added separately via the `AddSolutions` instruction.
-        solutions: Vec<Solution>,
+        solutions: Vec<[u8; 32]>,
     },
 
     /// Appends solutions to the end of the solutions array, keeping existing solutions in place.
@@ -48,7 +47,7 @@ pub enum ChallengeInstruction {
     AddSolutions {
         id: String,
         /// The solutions to add to the challenge
-        solutions: Vec<Solution>,
+        solutions: Vec<[u8; 32]>,
     },
 
     #[rustfmt::skip]
@@ -80,7 +79,7 @@ pub enum ChallengeInstruction {
     #[account(7, name = "associated_token_program", desc="Associated Token Program")]
     #[account(8, name = "system_program", desc="System Program")]
     Redeem {
-        solution: Solution,
+        solution: [u8; 32],
     },
     // TODO(thlorenz): may need some ixs for creators that want to mutate solutions, i.e.
     //  - add solutions at index (replacing existing ones)
