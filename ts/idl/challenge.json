@@ -1,0 +1,463 @@
+{
+  "version": "0.1.0",
+  "name": "challenge",
+  "instructions": [
+    {
+      "name": "CreateChallenge",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "desc": "pays for the transaction"
+        },
+        {
+          "name": "creator",
+          "isMut": false,
+          "isSigner": false,
+          "desc": "challenge authority"
+        },
+        {
+          "name": "challengePda",
+          "isMut": true,
+          "isSigner": false,
+          "desc": "PDA for the challenge"
+        },
+        {
+          "name": "redeemPda",
+          "isMut": true,
+          "isSigner": false,
+          "desc": "PDA of token to redeem for correct solution"
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "desc": "Token Program"
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "desc": "System Program"
+        }
+      ],
+      "args": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "admitCost",
+          "type": "u64"
+        },
+        {
+          "name": "triesPerAdmit",
+          "type": "u8"
+        },
+        {
+          "name": "redeem",
+          "type": "publicKey"
+        },
+        {
+          "name": "solutions",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 0
+      }
+    },
+    {
+      "name": "AddSolutions",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "desc": "pays for the transaction"
+        },
+        {
+          "name": "creator",
+          "isMut": false,
+          "isSigner": true,
+          "desc": "challenge authority"
+        },
+        {
+          "name": "challengePda",
+          "isMut": true,
+          "isSigner": false,
+          "desc": "PDA for the challenge"
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "desc": "System Program"
+        }
+      ],
+      "args": [
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "solutions",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 1
+      }
+    },
+    {
+      "name": "StartChallenge",
+      "accounts": [
+        {
+          "name": "creator",
+          "isMut": false,
+          "isSigner": true,
+          "desc": "challenge authority"
+        },
+        {
+          "name": "challengePda",
+          "isMut": true,
+          "isSigner": false,
+          "desc": "PDA for the challenge"
+        }
+      ],
+      "args": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 2
+      }
+    },
+    {
+      "name": "AdmitChallenger",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "desc": "pays for the transaction"
+        },
+        {
+          "name": "creator",
+          "isMut": true,
+          "isSigner": false,
+          "desc": "challenge authority"
+        },
+        {
+          "name": "challengePda",
+          "isMut": false,
+          "isSigner": false,
+          "desc": "PDA for the challenge"
+        },
+        {
+          "name": "challenger",
+          "isMut": false,
+          "isSigner": false,
+          "desc": "challenger account which receives the redeemed token"
+        },
+        {
+          "name": "challengerPda",
+          "isMut": true,
+          "isSigner": false,
+          "desc": "PDA for the challenger"
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "desc": "System Program"
+        }
+      ],
+      "args": [
+        {
+          "name": "challengePda",
+          "type": "publicKey"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 3
+      }
+    },
+    {
+      "name": "Redeem",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true,
+          "desc": "pays for the transaction"
+        },
+        {
+          "name": "challengePda",
+          "isMut": true,
+          "isSigner": false,
+          "desc": "PDA for the challenge"
+        },
+        {
+          "name": "challenger",
+          "isMut": false,
+          "isSigner": true,
+          "desc": "challenger account which receives the redeemed token"
+        },
+        {
+          "name": "challengerPda",
+          "isMut": true,
+          "isSigner": false,
+          "desc": "PDA for the challenger"
+        },
+        {
+          "name": "redeem",
+          "isMut": true,
+          "isSigner": false,
+          "desc": "PDA of token to redeem for correct solution"
+        },
+        {
+          "name": "redeemAta",
+          "isMut": true,
+          "isSigner": false,
+          "desc": "ATA for redeem PDA and challenger"
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "desc": "Token Program"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false,
+          "desc": "Associated Token Program"
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "desc": "System Program"
+        }
+      ],
+      "args": [
+        {
+          "name": "solution",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 4
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Challenge",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "started",
+            "type": "bool"
+          },
+          {
+            "name": "finished",
+            "type": "bool"
+          },
+          {
+            "name": "admitCost",
+            "type": "u64"
+          },
+          {
+            "name": "triesPerAdmit",
+            "type": "u8"
+          },
+          {
+            "name": "redeem",
+            "type": "publicKey"
+          },
+          {
+            "name": "solving",
+            "type": "u8"
+          },
+          {
+            "name": "solutions",
+            "type": {
+              "vec": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Challenger",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "challengePda",
+            "type": "publicKey"
+          },
+          {
+            "name": "triesRemaining",
+            "type": "u8"
+          },
+          {
+            "name": "redeemed",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Redeem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "challengePda",
+            "type": "publicKey"
+          },
+          {
+            "name": "pda",
+            "type": "publicKey"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 1165228,
+      "name": "AccountShouldBeSigner",
+      "msg": "Account should be signer"
+    },
+    {
+      "code": 1165229,
+      "name": "ProvidedAtaIsIncorrect",
+      "msg": "Provided ATA does not match the expected ATA"
+    },
+    {
+      "code": 1165230,
+      "name": "AccountNotFunded",
+      "msg": "Account not funded"
+    },
+    {
+      "code": 1165231,
+      "name": "ExceedingMaxSupportedSolutions",
+      "msg": "Amount of solutions exceeds maximum supported solutions "
+    },
+    {
+      "code": 1165232,
+      "name": "NoSolutionsToAddProvided",
+      "msg": "When adding solutions you need to provide at least one solution"
+    },
+    {
+      "code": 1165233,
+      "name": "AccountAlreadyExists",
+      "msg": "Account was expected to not exists yet, but it does"
+    },
+    {
+      "code": 1165234,
+      "name": "AccountAlreadyHasData",
+      "msg": "Account has data but was expected to be empty"
+    },
+    {
+      "code": 1165235,
+      "name": "AccountHasNoData",
+      "msg": "Account has no data"
+    },
+    {
+      "code": 1165236,
+      "name": "ChallengeAlreadyStarted",
+      "msg": "Challenge was started already and cannot be started again"
+    },
+    {
+      "code": 1165237,
+      "name": "ChallengeHasNoSolutions",
+      "msg": "Challenge has no solutions and thus cannot be started"
+    },
+    {
+      "code": 1165238,
+      "name": "ChallengeNotYetStarted",
+      "msg": "Challenge has not started yet and is not ready to admit challengers"
+    },
+    {
+      "code": 1165239,
+      "name": "ChallengeAlreadyFinished",
+      "msg": "Challenge was finished already and is not admitting challengers nor allowing to redeem prices"
+    },
+    {
+      "code": 1165240,
+      "name": "SolutionIsIncorrect",
+      "msg": "The provided solution did not match the currently expected solution"
+    },
+    {
+      "code": 1165241,
+      "name": "OutOfSolutions",
+      "msg": "All solutions were already redeemed"
+    },
+    {
+      "code": 1165242,
+      "name": "ChallengerHasNoTriesRemaining",
+      "msg": "This challenger used up all tries to solve the challenge"
+    },
+    {
+      "code": 1165243,
+      "name": "InsufficientFunds",
+      "msg": "Payer does not have sufficient lamports to fund the operation"
+    }
+  ],
+  "metadata": {
+    "origin": "shank",
+    "address": "FFFFaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS",
+    "binaryVersion": "0.0.11",
+    "libVersion": "0.0.11"
+  }
+}
