@@ -4,6 +4,7 @@ mod entrypoint;
 mod error;
 pub mod ixs;
 mod processor;
+pub mod shank_utils;
 pub mod state;
 #[cfg(not(feature = "test-sbf"))]
 mod utils;

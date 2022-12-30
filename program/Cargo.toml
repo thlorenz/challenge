@@ -9,6 +9,10 @@ crate-type = ["cdylib", "lib"]
 name = "challenge"
 doctest = false
 
+[[bin]]
+name = "dump_shank_accounts"
+path = "bin/dump_shank_accounts.rs"
+
 [features]
 no-entrypoint = []
 cpi = ["no-entrypoint"]
