@@ -1,0 +1,19 @@
+{
+  "name": "challenge",
+  "version": "0.0.0",
+  "description": "SDK for Challenge Solana contract.",
+  "main": "dist/challenge.js",
+  "repository": "git@github.com:thlorenz/challenge.git",
+  "author": "Thorsten Lorenz <thlorenz@gmx.de>",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.json",
+    "pretest": "yarn build",
+    "test": "tape dist/test/*.js",
+    "t": "esr ./test/challenge.ts | tap-spec",
+    "amman:start": "DEBUG='amman:(info|error)' amman start",
+    "amman:stop": "amman stop",
+    "api:gen": "solita"
+  }
+}
