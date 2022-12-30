@@ -21,7 +21,7 @@ test-sbf = []
 [dependencies]
 borsh = "0.9.3"
 solana-program = "^1.14.5"
-shank = { git = "https://github.com/metaplex-foundation/shank", branch = "thlorenz/feat/pda-knowledge" }
+shank = { version = "0.0.11", git = "https://github.com/metaplex-foundation/shank", branch = "thlorenz/feat/pda-knowledge" }
 
 num-derive = "0.3.3"
 num-traits = "0.2.15"
