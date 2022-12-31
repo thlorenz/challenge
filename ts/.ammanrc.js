@@ -3,7 +3,7 @@
 const path = require('path')
 const { LOCALHOST, tmpLedgerDir } = require('@metaplex-foundation/amman')
 const PROGRAM_ID = require('./idl/challenge.json').metadata.address
-const { accountProviders, accountRenderers } = require('./dist/src/providers')
+const { accountProviders } = require('./dist/src/providers')
 
 const localDeployPath = path.join(
   __dirname,
@@ -29,7 +29,6 @@ module.exports = {
   },
   relay: {
     accountProviders,
-    accountRenderers,
   },
   storage: {
     enabled: false,
