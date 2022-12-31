@@ -7,8 +7,12 @@ function hash(input: string): Buffer {
   return sha256.read()
 }
 
-export function hashSolutionToU8Array(solution: Buffer): Uint8Array {
+function hashSolutionToU8Array(solution: Buffer): Uint8Array {
   return Uint8Array.from(hash(solution.toString('hex')))
+}
+
+export function hashSolution(solution: string): number[] {
+  return Array.from(hashSolutionToU8Array(Buffer.from(solution)))
 }
 
 export function hashSolutions(solutions: string[]): number[][] {

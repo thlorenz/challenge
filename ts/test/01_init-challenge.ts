@@ -1,38 +1,11 @@
-import { Keypair, PublicKey, Transaction } from '@solana/web3.js'
+import { Transaction } from '@solana/web3.js'
 import spok from 'spok'
-import { pdaForChallenge } from 'src/common/pda'
-import { addSolutions, createChallenge, startChallenge } from 'src/ixs'
+import { addSolutions, createChallenge, startChallenge } from '../src/ixs'
 import { Challenge } from 'src/state/challenge'
-import { Redeem } from 'src/state/redeem'
 import test from 'tape'
-import { amman, killStuckProcess, setupCreator } from './utils'
+import { killStuckProcess, initChallengeAndCreator } from './utils'
 
 killStuckProcess()
-
-async function initChallengeAndCreator(challengeId = 'fst-challenge') {
-  const { connection, creator, creatorPair, creatorTxHandler } =
-    await setupCreator()
-
-  const [challenge, challengePair]: [PublicKey, Keypair, string] =
-    await amman.addr.genLabeledKeypair('challenge')
-
-  const challengePda = pdaForChallenge(creator, challengeId)
-  await amman.addr.addLabel('challengePda', challengePda)
-
-  const redeem = Redeem.forChallengeWith(creator, challengeId)
-  await amman.addr.addLabel('redeem mint', redeem.pda)
-
-  return {
-    connection,
-    creator,
-    creatorPair,
-    creatorTxHandler,
-    challengeId,
-    challenge,
-    challengePair,
-    challengePda,
-  }
-}
 
 test('init-challenge: adding solutions separately, then starting', async (t) => {
   const {

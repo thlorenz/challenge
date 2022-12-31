@@ -1,14 +1,23 @@
+import { ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { PublicKey } from '@solana/web3.js'
-import { pdaForChallenge, pdaForRedeem } from './common/pda'
-import { hashSolutions } from './common/solution'
+import { pdaForChallenge, pdaForChallenger, pdaForRedeem } from './common/pda'
+import { hashSolution, hashSolutions } from './common/solution'
 import {
   AddSolutionsInstructionArgs,
+  AdmitChallengerInstructionAccounts,
   createAddSolutionsInstruction,
+  createAdmitChallengerInstruction,
   CreateChallengeInstructionArgs,
   createCreateChallengeInstruction,
+  createRedeemInstruction,
   createStartChallengeInstruction,
+  RedeemInstructionAccounts,
 } from './generated'
+import { Redeem } from './state/redeem'
 
+// -----------------
+// Create Challenge
+// -----------------
 export function createChallenge(
   payer: PublicKey,
   creator: PublicKey,
@@ -37,6 +46,9 @@ export function createChallenge(
   return createCreateChallengeInstruction(accounts, args)
 }
 
+// -----------------
+// Add Solutions
+// -----------------
 export function addSolutions(
   payer: PublicKey,
   creator: PublicKey,
@@ -58,6 +70,9 @@ export function addSolutions(
   return createAddSolutionsInstruction(accounts, args)
 }
 
+// -----------------
+// Start Challenge
+// -----------------
 export function startChallenge(creator: PublicKey, id: string) {
   const challengePda = pdaForChallenge(creator, id)
   const accounts = {
@@ -65,4 +80,53 @@ export function startChallenge(creator: PublicKey, id: string) {
     challengePda,
   }
   return createStartChallengeInstruction(accounts, { id })
+}
+
+// -----------------
+// Admit Challenger
+// -----------------
+export function admitChallenger(
+  payer: PublicKey,
+  creator: PublicKey,
+  challengeId: string,
+  challenger: PublicKey
+) {
+  const challengePda = pdaForChallenge(creator, challengeId)
+  const challengerPda = pdaForChallenger(challengePda, challenger)
+
+  const accounts: AdmitChallengerInstructionAccounts = {
+    payer,
+    creator,
+    challengePda,
+    challenger,
+    challengerPda,
+  }
+  return createAdmitChallengerInstruction(accounts, { challengePda })
+}
+
+// -----------------
+// Redeem
+// -----------------
+export async function redeem(
+  payer: PublicKey,
+  creator: PublicKey,
+  challengeId: string,
+  challenger: PublicKey,
+  solution: string
+) {
+  const challengePda = pdaForChallenge(creator, challengeId)
+  const challengerPda = pdaForChallenger(challengePda, challenger)
+  const redeem = Redeem.forChallengeWith(creator, challengeId)
+
+  const accounts: RedeemInstructionAccounts = {
+    payer,
+    challengePda,
+    challenger,
+    challengerPda,
+    redeem: redeem.pda,
+    redeemAta: await redeem.ata(challenger),
+    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+  }
+  const hashedSolution = hashSolution(solution)
+  return createRedeemInstruction(accounts, { solution: hashedSolution })
 }

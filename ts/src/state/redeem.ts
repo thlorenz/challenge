@@ -25,6 +25,6 @@ export class Redeem implements HasPda {
   }
 
   ata(recvr: PublicKey): Promise<PublicKey> {
-    return getAssociatedTokenAddress(recvr, this._inner.pda)
+    return getAssociatedTokenAddress(this._inner.pda, recvr)
   }
 }
