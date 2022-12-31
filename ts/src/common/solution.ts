@@ -1,19 +1,21 @@
 import { createHash } from 'crypto'
 
-const sha256 = createHash('sha256')
-
-function hash(input: string): string {
-  return sha256.update(input).digest('hex')
+function hash(input: string): Buffer {
+  const sha256 = createHash('sha256')
+  sha256.update(input)
+  sha256.end()
+  return sha256.read()
 }
 
-export function hashSolutionChallengerSeeds(solution: string): Uint8Array {
-  return Uint8Array.from(Buffer.from(hash(solution)))
+export function hashSolutionToU8Array(solution: Buffer): Uint8Array {
+  return Uint8Array.from(hash(solution.toString('hex')))
 }
 
-export function hashSolutions(solutions: string[]): Uint8Array[] {
+export function hashSolutions(solutions: string[]): number[][] {
   return solutions.map((s) => {
     const challengerSends = hash(s)
     // program stores
-    return hashSolutionChallengerSeeds(challengerSends)
+    const uintArray = hashSolutionToU8Array(challengerSends)
+    return Array.from(uintArray)
   })
 }
