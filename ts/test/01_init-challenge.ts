@@ -1,6 +1,7 @@
 import { Keypair, PublicKey, Transaction } from '@solana/web3.js'
 import { pdaForChallenge } from 'src/common/pda'
 import { createChallenge } from 'src/ixs'
+import { Redeem } from 'src/state/redeem'
 import test from 'tape'
 import { amman, killStuckProcess, setupCreator } from './utils'
 
@@ -16,6 +17,9 @@ async function initChallengeAndCreator(challengeId = 'fst-challenge') {
   const challengePda = pdaForChallenge(creator, challengeId)
   await amman.addr.addLabel('challengePda', challengePda)
 
+  const redeem = Redeem.forChallengeWith(creator, challengeId)
+  await amman.addr.addLabel('redeem mint', redeem.pda)
+
   return {
     connection,
     creator,
@@ -28,7 +32,7 @@ async function initChallengeAndCreator(challengeId = 'fst-challenge') {
   }
 }
 
-test('01_init-challenge', async (t) => {
+test('init-challenge: adding solutions separately', async (t) => {
   const {
     connection: _,
     creator,
@@ -55,7 +59,7 @@ test('01_init-challenge', async (t) => {
     const tx = new Transaction().add(ix)
 
     await creatorTxHandler
-      .sendAndConfirmTransaction(tx, [], 'tx: init mint')
+      .sendAndConfirmTransaction(tx, [], 'tx: create challenge')
       .assertSuccess(t)
   }
 })
