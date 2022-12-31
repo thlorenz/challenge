@@ -2,8 +2,11 @@ import { PublicKey } from '@solana/web3.js'
 import { pdaForChallenge, pdaForRedeem } from './common/pda'
 import { hashSolutions } from './common/solution'
 import {
+  AddSolutionsInstructionArgs,
+  createAddSolutionsInstruction,
   CreateChallengeInstructionArgs,
   createCreateChallengeInstruction,
+  createStartChallengeInstruction,
 } from './generated'
 
 export function createChallenge(
@@ -29,8 +32,37 @@ export function createChallenge(
     admitCost,
     triesPerAdmit,
     redeem: redeemPda,
-    // @ts-ignore
     solutions: hashedSolutions,
   }
   return createCreateChallengeInstruction(accounts, args)
+}
+
+export function addSolutions(
+  payer: PublicKey,
+  creator: PublicKey,
+  id: string,
+  solutions: string[]
+) {
+  const challengePda = pdaForChallenge(creator, id)
+  const hashedSolutions = hashSolutions(solutions)
+
+  const accounts = {
+    payer,
+    creator,
+    challengePda,
+  }
+  let args: AddSolutionsInstructionArgs = {
+    id,
+    solutions: hashedSolutions,
+  }
+  return createAddSolutionsInstruction(accounts, args)
+}
+
+export function startChallenge(creator: PublicKey, id: string) {
+  const challengePda = pdaForChallenge(creator, id)
+  const accounts = {
+    creator,
+    challengePda,
+  }
+  return createStartChallengeInstruction(accounts, { id })
 }
