@@ -457,7 +457,6 @@ fn process_redeem<'a>(
         let bump_arr = [bump];
         let challenge_seeds = challenge.seeds(&bump_arr);
 
-        msg!("  mint token ({})", challenge.redeem);
         mint_token_to_recvr(MintTokenArgs {
             payer_info,
             recvr_info: challenger_info,
