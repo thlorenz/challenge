@@ -125,9 +125,9 @@ fn process_create_challenge<'a>(
 
         assert_keys_equal(challenge_pda_info.key, &challenge_pda, || {
             format!(
-            "PDA for the challenge for creator ({}) and id ({}) is incorrect",
-            creator_info.key, id
-        )
+                "PDA for the challenge for creator ({}) and id ({}) is incorrect",
+                creator_info.key, id
+            )
         })?;
         assert_account_has_no_data(challenge_pda_info)?;
 
@@ -151,9 +151,9 @@ fn process_create_challenge<'a>(
 
         assert_keys_equal(redeem_pda_info.key, &redeem_pda, || {
             format!(
-            "PDA for the challenge redeem ('{}') is incorrect, should be '{}'",
-            redeem_pda_info.key, redeem_pda
-        )
+                "PDA for the challenge redeem ('{}') is incorrect, should be '{}'",
+                redeem_pda_info.key, redeem_pda
+            )
         })?;
         assert_account_has_no_data(redeem_pda_info)?;
         create_mint(CreateMintArgs {
