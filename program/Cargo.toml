@@ -13,6 +13,10 @@ doctest = false
 name = "dump_shank_accounts"
 path = "bin/dump_shank_accounts.rs"
 
+[[bin]]
+name = "hash"
+path = "bin/hash.rs"
+
 [features]
 no-entrypoint = []
 cpi = ["no-entrypoint"]
