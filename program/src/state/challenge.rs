@@ -76,7 +76,8 @@ pub struct Challenge {
     /// - b) there is a series of puzzles that can be solved in order to solve the challenge, and
     ///   challengers may be allowed to redeem multiple times and receive the `redeem` token more
     ///   than once
-    pub solutions: Vec<Solution>,
+    // NOTE: shank doesn't handle type aliases yet nor an array with constant identifier
+    pub solutions: Vec<[u8; 32]>,
 }
 
 impl std::fmt::Debug for Challenge {

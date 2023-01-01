@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+yarn add                           \
+  @metaplex-foundation/beet        \
+  @metaplex-foundation/beet-solana \
+  @metaplex-foundation/cusper      \
+  @solana/web3.js
+
+yarn add -D                         \
+  @metaplex-foundation/amman        \
+  @metaplex-foundation/amman-client \
+  @metaplex-foundation/solita       \
+  @types/tape                       \
+  esbuild                           \
+  esbuild-runner                    \
+  rimraf                            \
+  spok                              \
+  tap-spec                          \
+  tape                              \
+  typescript
+
+# @types/bn.js \
+# @types/deep-diff \
+# @types/diff \
+# @types/node-fetch \
+# bn.js \

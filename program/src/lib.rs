@@ -4,10 +4,8 @@ mod entrypoint;
 mod error;
 pub mod ixs;
 mod processor;
+pub mod shank_utils;
 pub mod state;
-#[cfg(not(feature = "test-sbf"))]
-mod utils;
-#[cfg(feature = "test-sbf")]
 pub mod utils;
 
 declare_id!("FFFFaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");

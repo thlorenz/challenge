@@ -1,4 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
+use shank::ShankInstruction;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     program_error::ProgramError,
@@ -10,11 +11,17 @@ use crate::{
     challenge_id,
     state::{Challenge, Challenger, HasPda, Redeem},
     utils::{hash_solution_challenger_sends, hash_solutions},
-    Solution,
 };
 
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Debug, ShankInstruction)]
 pub enum ChallengeInstruction {
+    #[rustfmt::skip]
+    #[account(0, name = "payer", mut, sig, desc="pays for the transaction")]
+    #[account(1, name = "creator", desc="challenge authority")]
+    #[account(2, name = "challenge_pda", mut, desc="PDA for the challenge")]
+    #[account(3, name = "redeem_pda", mut, desc="PDA of token to redeem for correct solution")]
+    #[account(4, name = "token_program", desc="Token Program")]
+    #[account(5, name = "system_program", desc="System Program")]
     CreateChallenge {
         id: String,
         admit_cost: u64,
@@ -28,26 +35,51 @@ pub enum ChallengeInstruction {
         /// Thus the max size of solutions is 32 * 256 = 8,192 bytes.
         /// Transaction size is ~1,024 bytes which means if more solutions are desired they
         /// need to be added separately via the `AddSolutions` instruction.
-        solutions: Vec<Solution>,
+        solutions: Vec<[u8; 32]>,
     },
 
     /// Appends solutions to the end of the solutions array, keeping existing solutions in place.
+    #[rustfmt::skip]
+    #[account(0, name = "payer", mut, sig, desc="pays for the transaction")]
+    #[account(1, name = "creator", sig, desc="challenge authority")]
+    #[account(2, name = "challenge_pda", mut, desc="PDA for the challenge")]
+    #[account(3, name = "system_program", desc="System Program")]
     AddSolutions {
         id: String,
         /// The solutions to add to the challenge
-        solutions: Vec<Solution>,
+        solutions: Vec<[u8; 32]>,
     },
 
+    #[rustfmt::skip]
+    #[account(0, name = "creator", sig, desc="challenge authority")]
+    #[account(1, name = "challenge_pda", mut, desc="PDA for the challenge")]
     StartChallenge {
         id: String,
     },
 
+    #[rustfmt::skip]
+    #[account(0, name = "payer", mut, sig, desc="pays for the transaction")]
+    #[account(1, name = "creator", mut, desc="challenge authority")]
+    #[account(2, name = "challenge_pda", desc="PDA for the challenge")]
+    #[account(3, name = "challenger", desc="challenger account which receives the redeemed token")]
+    #[account(4, name = "challenger_pda", mut, desc="PDA for the challenger")]
+    #[account(5, name = "system_program", desc="System Program")]
     AdmitChallenger {
         challenge_pda: Pubkey,
     },
 
+    #[rustfmt::skip]
+    #[account(0, name = "payer", mut, sig, desc="pays for the transaction")]
+    #[account(1, name = "challenge_pda", mut, desc="PDA for the challenge")]
+    #[account(2, name = "challenger", sig, desc="challenger account which receives the redeemed token")]
+    #[account(3, name = "challenger_pda", mut, desc="PDA for the challenger")]
+    #[account(4, name = "redeem", mut, desc="PDA of token to redeem for correct solution")]
+    #[account(5, name = "redeem_ata", mut, desc="ATA for redeem PDA and challenger")]
+    #[account(6, name = "token_program", desc="Token Program")]
+    #[account(7, name = "associated_token_program", desc="Associated Token Program")]
+    #[account(8, name = "system_program", desc="System Program")]
     Redeem {
-        solution: Solution,
+        solution: [u8; 32],
     },
     // TODO(thlorenz): may need some ixs for creators that want to mutate solutions, i.e.
     //  - add solutions at index (replacing existing ones)
