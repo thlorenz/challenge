@@ -1,7 +1,7 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { PublicKey } from '@solana/web3.js'
 import { pdaForChallenge, pdaForChallenger, pdaForRedeem } from './common/pda'
-import { hashSolution, hashSolutions } from './common/solution'
+import { hashSolution, doubleHashSolutions } from './common/solution'
 import {
   AddSolutionsInstructionArgs,
   AdmitChallengerInstructionAccounts,
@@ -28,7 +28,7 @@ export function createChallenge(
 ) {
   const challengePda = pdaForChallenge(creator, id)
   const redeemPda = pdaForRedeem(challengePda)
-  const hashedSolutions = hashSolutions(solutions)
+  const hashedSolutions = doubleHashSolutions(solutions)
 
   const accounts = {
     payer,
@@ -56,7 +56,7 @@ export function addSolutions(
   solutions: string[]
 ) {
   const challengePda = pdaForChallenge(creator, id)
-  const hashedSolutions = hashSolutions(solutions)
+  const hashedSolutions = doubleHashSolutions(solutions)
 
   const accounts = {
     payer,
