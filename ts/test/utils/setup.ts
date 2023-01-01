@@ -8,7 +8,7 @@ import {
 } from '@solana/web3.js'
 import { pdaForChallenge, pdaForChallenger } from '../../src/common/pda'
 import { admitChallenger, createChallenge, startChallenge } from '../../src/ixs'
-import { Redeem } from 'src/state/redeem'
+import { Redeem } from '../../src/state/redeem'
 import { Test } from 'tape'
 import { amman } from './amman'
 

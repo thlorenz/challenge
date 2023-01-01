@@ -1,7 +1,7 @@
 import { Transaction } from '@solana/web3.js'
 import spok from 'spok'
 import { addSolutions, createChallenge, startChallenge } from '../src/ixs'
-import { Challenge } from 'src/state/challenge'
+import { Challenge } from '../src/state/challenge'
 import test from 'tape'
 import { killStuckProcess, initChallengeAndCreator } from './utils'
 

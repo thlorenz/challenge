@@ -1,7 +1,7 @@
 import { getAssociatedTokenAddress } from '@solana/spl-token'
 import { PublicKey } from '@solana/web3.js'
-import { pdaForChallenge, pdaForRedeem } from 'src/common/pda'
-import { HasPda } from 'src/framework/types'
+import { pdaForChallenge, pdaForRedeem } from '../common/pda'
+import { HasPda } from '../framework/types'
 import { Redeem as RedeemAccount, RedeemArgs } from '../generated'
 
 export class Redeem implements HasPda {

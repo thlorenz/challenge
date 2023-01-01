@@ -8,8 +8,8 @@ import {
   setupChallenger,
 } from './utils'
 import { Challenge } from '../src/state/challenge'
-import { Challenger } from 'src/state/challenger'
-import { PROGRAM_ADDRESS } from 'src/generated'
+import { Challenger } from '../src/state/challenger'
+import { PROGRAM_ADDRESS } from '../src/generated'
 
 killStuckProcess()
 

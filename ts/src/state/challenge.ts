@@ -4,8 +4,8 @@ import {
   GetAccountInfoConfig,
   PublicKey,
 } from '@solana/web3.js'
-import { pdaForChallenge } from 'src/common/pda'
-import { HasPda } from 'src/framework/types'
+import { pdaForChallenge } from '../common/pda'
+import { HasPda } from '../framework/types'
 import {
   Challenge as ChallengeAccount,
   ChallengeArgs,

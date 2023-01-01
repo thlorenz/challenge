@@ -4,8 +4,8 @@ import {
   GetAccountInfoConfig,
   PublicKey,
 } from '@solana/web3.js'
-import { pdaForChallenger } from 'src/common/pda'
-import { HasPda } from 'src/framework/types'
+import { pdaForChallenger } from '../common/pda'
+import { HasPda } from '../framework/types'
 import { Challenger as ChallengerAccount, ChallengerArgs } from '../generated'
 
 export class Challenger implements HasPda {

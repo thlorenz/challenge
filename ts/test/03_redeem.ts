@@ -6,8 +6,8 @@ import {
   startChallengeWithSolutions,
   setupAndAdmitChallenger,
 } from './utils'
-import { Challenger } from 'src/state/challenger'
-import { Redeem } from 'src/state/redeem'
+import { Challenger } from '../src/state/challenger'
+import { Redeem } from '../src/state/redeem'
 import spok from 'spok'
 
 killStuckProcess()
