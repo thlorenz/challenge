@@ -75,6 +75,53 @@ export async function initChallengeAndCreator(challengeId = 'fst-challenge') {
     challengePda,
   }
 }
+export async function createEmptyChallenge(
+  t: Test,
+  opts = {
+    challengeId: 'challenge',
+    admitCost: 0.25 * LAMPORTS_PER_SOL, // 0.25 SOL ~ $2.50
+    triesPerAdmit: 3,
+  }
+) {
+  const { challengeId, admitCost, triesPerAdmit } = opts
+  const {
+    connection,
+    creator,
+    creatorPair,
+    creatorTxHandler,
+    challenge,
+    challengePair,
+    challengePda,
+  } = await initChallengeAndCreator(challengeId)
+
+  const createIx = createChallenge(
+    creator,
+    creator,
+    challengeId,
+    admitCost,
+    triesPerAdmit,
+    []
+  )
+
+  const tx = new Transaction().add(createIx)
+
+  await creatorTxHandler
+    .sendAndConfirmTransaction(tx, [], 'tx: create challenge ' + challengeId)
+    .assertSuccess(t)
+
+  return {
+    connection,
+    creator,
+    creatorPair,
+    creatorTxHandler,
+    challengeId,
+    challenge,
+    challengePair,
+    challengePda,
+    admitCost,
+    triesPerAdmit,
+  }
+}
 
 export async function startChallengeWithSolutions(
   t: Test,

@@ -30,7 +30,16 @@ export class Challenger implements HasPda {
   pretty() {
     return this._inner.pretty()
   }
+
   get pda() {
     return pdaForChallenger(this._inner.challengePda, this._inner.authority)
+  }
+
+  static get getMinimumBalanceForRentExemption() {
+    return ChallengerAccount.getMinimumBalanceForRentExemption
+  }
+
+  static get size() {
+    return ChallengerAccount.byteSize
   }
 }

@@ -1,4 +1,5 @@
 import {
+  AccountInfo,
   Commitment,
   Connection,
   GetAccountInfoConfig,
@@ -19,10 +20,30 @@ export class Challenge implements HasPda {
     this._inner = ChallengeAccount.fromArgs(args)
   }
 
-  admittedChallengers(connection: Connection) {
+  // Diagnositics
+
+  static findAll(connection: Connection) {
+    return ChallengeAccount.gpaBuilder().run(connection)
+  }
+
+  static findByCreator(connection: Connection, creator: PublicKey) {
+    return ChallengeAccount.gpaBuilder()
+      .addFilter('authority', creator)
+      .run(connection)
+  }
+
+  findAdmittedChallengers(connection: Connection) {
     return ChallengerAccount.gpaBuilder()
       .addFilter('challengePda', this.pda)
       .run(connection)
+  }
+
+  static fromAccountInfo(
+    accountInfo: AccountInfo<Buffer>,
+    offset = 0
+  ): Challenge {
+    const [account] = ChallengeAccount.fromAccountInfo(accountInfo, offset)
+    return new Challenge(account)
   }
 
   static async fromAccountAddress(
