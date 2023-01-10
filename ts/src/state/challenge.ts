@@ -132,6 +132,7 @@ export class ChallengeWithStats {
     return this.redeemers.size
   }
 
+  // TODO(thlorenz): calculate this more correct when we track challenger rebuys
   get feesPaid() {
     return new BN(this.admitted)
       .mul(new BN(this.challenge.admitCost))
@@ -140,7 +141,7 @@ export class ChallengeWithStats {
   }
 
   pretty() {
-    const challengers: Record<string, object> = {}
+    const challengers: Record<string, ReturnType<Challenger['pretty']>> = {}
     for (const [key, challenger] of this.challengers) {
       challengers[key] = challenger.pretty()
     }
